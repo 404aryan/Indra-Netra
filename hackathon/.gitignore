@@ -1,0 +1,12 @@
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.pt
+*.weights
+*.onnx
+*.zip
+*.rar
+venv/
+__pycache__/
+*.pt
