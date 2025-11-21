@@ -1,0 +1,18 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VSCode
+.vscode/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# Flask cache
+instance/
+
