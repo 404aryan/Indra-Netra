@@ -278,16 +278,33 @@ def run_stampede_detection(camera_id, source_path, model):
     
     config = CAMERA_CONFIGS.get(camera_id, CAMERA_CONFIGS["temple_flow_gate2"])
 
-    cap = cv2.VideoCapture(source_path)
+    if isinstance(source_path, int) and os.name == 'nt':
+        cap = cv2.VideoCapture(source_path, cv2.CAP_DSHOW) # specific fix for Windows local webcams
+    else:
+        cap = cv2.VideoCapture(source_path)
+
     if not cap.isOpened():
         print(f"Cannot open video for {camera_id}")
+        with status_lock:
+            if camera_id in status_data:
+                status_data[camera_id]["situation"] = "Connection Failed"
         return
 
     fps = cap.get(cv2.CAP_PROP_FPS)
     frame_delay = 1 / fps if fps > 0 else 0.033
 
-    ret, prev_frame = cap.read()
-    if not ret: return
+    for _ in range(30):
+        ret, prev_frame = cap.read()
+        if ret and prev_frame is not None:
+            break
+        time.sleep(0.1)
+    
+    if not ret or prev_frame is None: 
+        print(f"[{camera_id}] Could not read first frame, exiting.")
+        with status_lock:
+            if camera_id in status_data:
+                status_data[camera_id]["situation"] = "Stream Timeout"
+        return
     prev_frame = cv2.resize(prev_frame, (640, 360))
     prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
     
@@ -299,8 +316,16 @@ def run_stampede_detection(camera_id, source_path, model):
     
     while True:
         ret, frame = cap.read()
-        if not ret:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        if not ret or frame is None:
+            if isinstance(source_path, int) or str(source_path).startswith('http'):
+                cap.release()
+                time.sleep(0.5)
+                if isinstance(source_path, int) and os.name == 'nt':
+                    cap = cv2.VideoCapture(source_path, cv2.CAP_DSHOW)
+                else:
+                    cap = cv2.VideoCapture(source_path)
+            else:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             continue
 
         frame = cv2.resize(frame, (640, 360))
@@ -604,6 +629,15 @@ def api_cameras():
     camera_id = payload.get('camera_id', '').strip().lower().replace(' ', '_')
     label = payload.get('label', camera_id.upper()).strip()
     source = payload.get('source', '').strip()
+    if source.isdigit():
+        source = int(source)
+    elif isinstance(source, str) and source.startswith("http"):
+        import urllib.parse
+        parsed = urllib.parse.urlparse(source)
+        if not parsed.path or parsed.path == "/":
+            source = source.rstrip("/") + "/video"
+            
+    zone_type = payload.get('zone_type', 'open_area').strip().lower()
 
     if not camera_id or not source:
         return jsonify({"error": "Camera ID and source are required."}), 400
@@ -612,12 +646,53 @@ def api_cameras():
     if shared_model is None:
         return jsonify({"error": "Model not yet initialized."}), 503
 
+    # Assign appropriate thresholds based on zone type
+    ZONE_TYPE_CONFIGS = {
+        "darshan": { "HIGH_RISK_THRESHOLD": 0.50, "STAMPEDE_THRESHOLD": 0.7, "NORM_DENSITY": 70.0 },
+        "queue": { "DENSITY_HIGH": 200, "MOTION_LOW_CRUSH": 0.1, "HIGH_RISK_THRESHOLD": 0.1, "STAMPEDE_THRESHOLD": 0.25, "NORM_DENSITY": 250.0 },
+        "gate": { "DENSITY_HIGH": 50, "MOTION_LOW_CRUSH": 0.8, "HIGH_RISK_THRESHOLD": 0.40, "STAMPEDE_THRESHOLD": 0.75, "NORM_DENSITY": 70.0 },
+        "open_area": { "DENSITY_HIGH": 40, "MOTION_LOW_CRUSH": 0.5, "HIGH_RISK_THRESHOLD": 0.45, "STAMPEDE_THRESHOLD": 0.70, "NORM_DENSITY": 60.0 },
+    }
+    config = ZONE_TYPE_CONFIGS.get(zone_type, ZONE_TYPE_CONFIGS["open_area"])
+    CAMERA_CONFIGS[camera_id] = config
+
     CAMERA_LABELS[camera_id] = label or camera_id.upper()
     register_camera_structures(camera_id)
     VIDEO_SOURCES[camera_id] = source
     thread = threading.Thread(target=run_stampede_detection, args=(camera_id, source, shared_model), daemon=True)
     thread.start()
     return jsonify({"status": "ok", "camera": {"id": camera_id, "label": CAMERA_LABELS[camera_id], "source": source}})
+
+
+@app.route('/api/test_camera', methods=['POST'])
+def api_test_camera():
+    """Test if a camera URL/stream can be opened by OpenCV."""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    payload = request.get_json(force=True)
+    source = payload.get('source', '').strip()
+    if not source:
+        return jsonify({"ok": False, "error": "No source URL provided."}), 400
+    if isinstance(source, str) and source.isdigit():
+        source = int(source)
+    elif isinstance(source, str) and source.startswith("http"):
+        import urllib.parse
+        parsed = urllib.parse.urlparse(source)
+        if not parsed.path or parsed.path == "/":
+            source = source.rstrip("/") + "/video"
+            
+    try:
+        cap = cv2.VideoCapture(source)
+        if not cap.isOpened():
+            return jsonify({"ok": False, "error": "Could not open the stream. Check the URL and ensure the app is running on your phone."})
+        ret, frame = cap.read()
+        cap.release()
+        if not ret or frame is None:
+            return jsonify({"ok": False, "error": "Stream opened but no frame received. The camera may not be transmitting."})
+        h, w = frame.shape[:2]
+        return jsonify({"ok": True, "message": f"Connection successful! Resolution: {w}x{h}"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Error: {str(e)}"})
 
 
 @app.route('/api/contacts', methods=['GET', 'POST'])
@@ -699,4 +774,4 @@ if __name__ == '__main__':
         thread = threading.Thread(target=run_stampede_detection, args=(cam_id, path, shared_model), daemon=True)
         thread.start()
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)

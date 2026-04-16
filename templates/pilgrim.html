@@ -4,294 +4,643 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crowd Management System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Indra-Netra — Pilgrim Guide</title>
+    <meta name="description" content="Live crowd status, queue times, and interactive crowd map for pilgrims. Find safe routes and avoid congestion.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #F0F4F8;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --surface-0: #0a0e17;
+            --surface-1: #111827;
+            --surface-2: #1a2233;
+            --surface-3: #232d3f;
+            --accent: #e8a830;
+            --accent-dim: #b8841e;
+            --accent-soft: #f6d06b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --text-inverse: #0a0e17;
+            --border: rgba(148, 163, 184, 0.12);
+            --safe: #34d399;
+            --safe-border: rgba(52, 211, 153, 0.25);
+            --warning: #fbbf24;
+            --warning-border: rgba(251, 191, 36, 0.25);
+            --danger: #fb923c;
+            --critical: #ef4444;
+            --critical-border: rgba(239, 68, 68, 0.35);
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+            --radius-full: 999px;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
-        .marquee-container {
-            width: 100%;
+
+        body {
+            font-family: "Outfit", system-ui, sans-serif;
+            background: var(--surface-0);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px;
+        }
+
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 16px 16px 60px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            background: radial-gradient(ellipse at 30% 0%, rgba(232,168,48,0.06), transparent 50%), var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 28px 20px 18px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .brand-tag {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        header h1 {
+            font-family: "DM Serif Display", Georgia, serif;
+            font-size: 28px;
+            font-weight: 400;
+            color: var(--text-primary);
+            margin: 4px 0;
+        }
+
+        header .subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Marquee */
+        .marquee-wrap {
+            margin-top: 14px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            padding: 8px 16px;
             overflow: hidden;
             white-space: nowrap;
         }
+
         .marquee-text {
             display: inline-block;
-            animation: marquee 20s linear infinite;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--accent-soft);
+            animation: marquee 25s linear infinite;
         }
+
         @keyframes marquee {
             0% { transform: translateX(100%); }
             100% { transform: translateX(-100%); }
         }
-        .status-box {
-            transition: background-color 0.5s ease-in-out;
+
+        /* Section Labels */
+        .section-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin: 24px 0 12px;
+            padding-left: 2px;
         }
-        .pulse-border {
-            animation: pulse-border 2s infinite;
+
+        /* Queue Cards */
+        .queue-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
         }
-        @keyframes pulse-border {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+
+        .queue-card {
+            padding: 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--surface-1);
+            text-align: center;
+            transition: all 0.4s var(--ease-out);
         }
-        .map-container {
-            position: relative;
+
+        .queue-card .queue-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+        }
+
+        .queue-card .wait-time {
+            font-family: "DM Serif Display", Georgia, serif;
+            font-size: 32px;
+            font-weight: 400;
+            line-height: 1.1;
+        }
+
+        .queue-card .wait-unit {
+            font-family: "Outfit", sans-serif;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .queue-card .status-badge {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+
+        /* Card level states */
+        .queue-card.level-safe { border-color: var(--safe-border); }
+        .queue-card.level-safe .wait-time { color: var(--safe); }
+        .queue-card.level-safe .status-badge { background: rgba(52,211,153,0.1); color: var(--safe); border: 1px solid var(--safe-border); }
+
+        .queue-card.level-crowded { border-color: var(--warning-border); }
+        .queue-card.level-crowded .wait-time { color: var(--warning); }
+        .queue-card.level-crowded .status-badge { background: rgba(251,191,36,0.1); color: var(--warning); border: 1px solid var(--warning-border); }
+
+        .queue-card.level-risk { border-color: rgba(249,115,22,0.3); }
+        .queue-card.level-risk .wait-time { color: var(--danger); }
+        .queue-card.level-risk .status-badge { background: rgba(249,115,22,0.1); color: var(--danger); border: 1px solid rgba(249,115,22,0.3); }
+
+        .queue-card.level-stampede { border-color: var(--critical-border); animation: card-pulse 2s ease-in-out infinite; }
+        .queue-card.level-stampede .wait-time { color: var(--critical); }
+        .queue-card.level-stampede .status-badge { background: rgba(239,68,68,0.12); color: var(--critical); border: 1px solid var(--critical-border); }
+
+        @keyframes card-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.2); }
+            50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+        }
+
+        /* Embedded Leaflet Map */
+        .map-embed {
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            background: var(--surface-1);
+        }
+
+        #pilgrim-map {
             width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
+            height: 360px;
         }
-        .map-zone {
-            position: absolute;
+
+        .map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            padding: 10px 14px;
+            background: var(--surface-2);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot::before {
+            content: "";
+            width: 10px;
+            height: 3px;
+            border-radius: var(--radius-full);
+        }
+
+        .legend-dot.l-safe::before { background: var(--safe); }
+        .legend-dot.l-med::before { background: var(--warning); }
+        .legend-dot.l-high::before { background: var(--danger); }
+        .legend-dot.l-block::before { background: var(--critical); }
+
+        /* Safety Button */
+        .safety-action {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .safety-btn {
+            padding: 14px 24px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-muted);
+            font-family: "Outfit", sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: not-allowed;
+            opacity: 0.5;
+            transition: all 0.3s var(--ease-out);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .safety-btn.active {
             cursor: pointer;
-            border-radius: 9999px;
-            transition: all 0.3s ease-in-out;
-            border: 3px solid rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(2px);
+            opacity: 1;
+            background: linear-gradient(135deg, #b91c1c, #ef4444);
+            color: white;
+            border: none;
+            box-shadow: 0 8px 24px rgba(239,68,68,0.25);
         }
-        .map-zone.low { background-color: rgba(34, 197, 94, 0.7); } /* Green */
-        .map-zone.medium { background-color: rgba(251, 191, 36, 0.7); } /* Yellow */
-        .map-zone.warning { background-color: rgba(249, 115, 22, 0.7); } /* Orange */
-        .map-zone.high { background-color: rgba(239, 68, 68, 0.7); } /* Red */
-        .map-zone:hover {
-            transform: scale(1.2);
-            z-index: 10;
+
+        .safety-btn.active:hover {
+            box-shadow: 0 14px 36px rgba(239,68,68,0.35);
+            transform: translateY(-2px);
         }
-        @keyframes blink {
-            50% { opacity: 0.3; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(10,14,23,0.8);
+            backdrop-filter: blur(8px);
         }
-        .map-zone.warning,
-        .map-zone.high {
-            animation: blink 1.5s linear infinite;
+        .modal-overlay.visible { display: flex; }
+
+        .modal-card {
+            background: var(--surface-1);
+            border: 1px solid var(--critical-border);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow-lg);
+            animation: modal-in 0.3s var(--ease-out);
+        }
+
+        @keyframes modal-in {
+            from { opacity: 0; transform: translateY(12px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .modal-card h3 {
+            font-family: "DM Serif Display", Georgia, serif;
+            font-size: 20px;
+            font-weight: 400;
+            color: var(--critical);
+            margin-bottom: 8px;
+        }
+
+        .modal-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; }
+
+        .safe-zone-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            background: rgba(52,211,153,0.06);
+            border: 1px solid var(--safe-border);
+            margin-bottom: 8px;
+        }
+
+        .safe-zone-item svg { width: 18px; height: 18px; color: var(--safe); flex-shrink: 0; }
+        .safe-zone-item span { font-weight: 600; font-size: 13px; color: var(--safe); }
+
+        .modal-close-btn {
+            margin-top: 14px;
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: none;
+            background: var(--surface-3);
+            color: var(--text-primary);
+            font-family: "Outfit", sans-serif;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+
+        @media (max-width: 640px) {
+            header h1 { font-size: 22px; }
+            .queue-grid { grid-template-columns: repeat(2, 1fr); }
+            .queue-card .wait-time { font-size: 26px; }
+            #pilgrim-map { height: 280px; }
+        }
+
+        @media (max-width: 380px) {
+            .queue-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 
-<body class="p-4 flex flex-col items-center">
-
-    <header class="w-full max-w-5xl mx-auto text-center bg-gray-900 rounded-xl shadow-md p-6 mb-8">
-        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white">Temple Crowd Management System</h1>
-        <p class="text-gray-400 mt-2">Live queue status and interactive map for pilgrims.</p>
-        <div class="mt-4 flex flex-wrap items-center justify-center gap-3">
-            <a href="{{ url_for('live_map') }}" target="_blank"
-               class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/40 transition">
-                🗺 Open Live Map (GPS + Routes)
-            </a>
-        </div>
-        <div class="bg-gray-700 text-white py-2 px-4 rounded-full shadow-lg overflow-hidden mt-4">
-            <div class="marquee-container">
-                <span id="alert-marquee" class="marquee-text font-semibold">
-                    Initializing system... Please wait for real-time updates.
+<body>
+    <div class="page-wrapper">
+        <header id="pilgrim-header">
+            <div class="brand-tag">Indra-Netra</div>
+            <h1>Pilgrim Guide</h1>
+            <p class="subtitle">Live queue times & crowd safety map</p>
+            <div class="marquee-wrap">
+                <span id="alert-marquee" class="marquee-text">
+                    Initializing... Please wait for real-time updates.
                 </span>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <main class="w-full max-w-5xl mx-auto flex-grow">
-        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Live Queue Status</h2>
-        <div id="status-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        </div>
+        <main>
+            <!-- Queue Status Cards -->
+            <p class="section-label">Queue Wait Times</p>
+            <div id="status-container" class="queue-grid"></div>
 
-        <h2 class="text-2xl font-bold text-center text-gray-800 my-8">Interactive Temple Map</h2>
-        <div class="w-full p-4 bg-gray-200 rounded-xl shadow-inner">
-            <div class="map-container relative">
-                <img id="map-image" src="{{ url_for('static', filename='images/temple_map.jpeg') }}" alt="Temple Grounds Map" class="w-full h-auto rounded-xl shadow-lg">
-                <div id="status-zone-temple_darshan_zone1" class="map-zone w-[18%] h-[12%]" style="top: 42%;left: 44%;"></div>
-                <div id="status-zone-temple_queue_cam1" class="map-zone w-[10%] h-[8%]" style="top: 60%;left: 29%;"></div>
-                <div id="status-zone-temple_queue_cam2" class="map-zone w-[10%] h-[8%]" style="top: 42%;left: 67%;"></div>
-                <div id="status-zone-temple_outer_queue1" class="map-zone w-[12%] h-[8%]" style="top: 0%;left: 28%;"></div>
-                <div id="status-zone-temple_flow_gate2" class="map-zone w-[10%] h-[7%]" style="top: 77%;left: 81%;"></div>
-            </div>
-        </div>
-
-        <div class="mt-8 flex flex-col md:flex-row items-center justify-center gap-4">
-            <button id="pilgrim-button"
-                    class="w-full md:w-auto py-4 px-6 rounded-xl font-bold text-lg text-white bg-gray-400 hover:bg-red-600 transition-all duration-300 cursor-not-allowed opacity-50"
-                    disabled>
-                Avoid Heavy Crowd: See Safer Areas
-            </button>
-        </div>
-    </main>
-
-    <div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-80">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md text-left border-2 border-red-500">
-            <h3 class="text-2xl font-bold mb-2 text-red-600">High Crowd Alert!</h3>
-            <p class="text-gray-700 mb-6">For your safety, please consider moving towards these less crowded, safer areas:</p>
-            
-            <div id="safe-zones-list" class="space-y-3 mb-6">
+            <!-- Embedded Live Map -->
+            <p class="section-label">Live Crowd Map</p>
+            <div class="map-embed">
+                <div id="pilgrim-map"></div>
+                <div class="map-legend">
+                    <span class="legend-dot l-safe">Low crowd</span>
+                    <span class="legend-dot l-med">Medium</span>
+                    <span class="legend-dot l-high">High</span>
+                    <span class="legend-dot l-block">Blocked</span>
                 </div>
+            </div>
 
-            <button id="close-modal" class="w-full py-3 px-6 bg-red-500 hover:bg-red-600 rounded-lg font-semibold text-white">Close</button>
+            <!-- Safety Action -->
+            <div class="safety-action">
+                <button id="pilgrim-button" class="safety-btn" disabled>
+                    ⚠ See Safer Areas
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Safety Modal -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3>⚠ High Crowd Alert</h3>
+            <p class="modal-desc">Consider moving towards these safer areas:</p>
+            <div id="safe-zones-list"></div>
+            <button id="close-modal" class="modal-close-btn">Close</button>
         </div>
     </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const alertMarquee = document.getElementById('alert-marquee');
-            const pilgrimButton = document.getElementById('pilgrim-button');
-            const modal = document.getElementById('modal');
-            const closeModalBtn = document.getElementById('close-modal');
-            const statusContainer = document.getElementById('status-container');
-            // --- KEY CHANGE 2: Get a reference to the new list container in the modal ---
-            const safeZonesList = document.getElementById('safe-zones-list');
-            
-            // --- KEY CHANGE 3: Store the latest data in a global scope ---
-            let latestStatusData = {};
+    document.addEventListener('DOMContentLoaded', () => {
+        const alertMarquee = document.getElementById('alert-marquee');
+        const pilgrimButton = document.getElementById('pilgrim-button');
+        const modal = document.getElementById('modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const statusContainer = document.getElementById('status-container');
+        const safeZonesList = document.getElementById('safe-zones-list');
 
-            const cameraNames = {
-                'temple_darshan_zone1': 'Darshan Queue',
-                'temple_queue_cam1': 'Queue 1',
-                'temple_queue_cam2': 'Queue 2',
-                'temple_outer_queue1': 'Outer Queue',
-                'temple_flow_gate2': 'Gate Flow'
-            };
+        let latestStatusData = {};
 
-            const createStatusBox = (cameraId, name) => {
-                const boxHtml = `
-                    <div id="status-box-${cameraId}" class="status-box p-6 rounded-xl shadow-lg bg-gray-100 text-center">
-                        <h3 class="text-xl font-bold mb-2">${name}</h3>
-                        <p class="text-sm text-gray-500"><span id="wait-label-${cameraId}">Estimated Wait: </span><span id="wait-${cameraId}" class="font-semibold">...</span></p>
-                        <p id="message-${cameraId}" class="text-lg font-bold mt-3 text-gray-700">Initializing...</p>
-                    </div>
-                `;
-                statusContainer.insertAdjacentHTML('beforeend', boxHtml);
-            };
+        const cameraNames = {
+            'temple_darshan_zone1': 'Darshan',
+            'temple_queue_cam1': 'Queue 1',
+            'temple_queue_cam2': 'Queue 2',
+            'temple_outer_queue1': 'Outer Queue',
+            'temple_flow_gate2': 'Gate Flow'
+        };
 
-            for (const cameraId in cameraNames) {
-                createStatusBox(cameraId, cameraNames[cameraId]);
+        // ============================
+        // QUEUE CARDS
+        // ============================
+        for (const cameraId in cameraNames) {
+            statusContainer.insertAdjacentHTML('beforeend', `
+                <div id="status-box-${cameraId}" class="queue-card">
+                    <div class="queue-name">${cameraNames[cameraId]}</div>
+                    <div class="wait-time" id="wait-${cameraId}">—</div>
+                    <div class="wait-unit">min wait</div>
+                    <div class="status-badge" id="badge-${cameraId}">Loading</div>
+                </div>
+            `);
+        }
+
+        // ============================
+        // EMBEDDED LEAFLET MAP
+        // ============================
+        const pilgrimMap = L.map('pilgrim-map', {
+            zoomControl: false,
+            attributionControl: false
+        }).setView([12.9718, 77.5949], 17);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20
+        }).addTo(pilgrimMap);
+
+        const mapGateMarkers = {};
+        const mapAreaLayers = {};
+        const mapRouteLayers = {};
+
+        function levelToColor(level) {
+            switch (level) {
+                case 'low': return '#34d399';
+                case 'medium': return '#fbbf24';
+                case 'high': return '#fb923c';
+                case 'blocked': return '#ef4444';
+                default: return '#64748b';
             }
-            
-            const fetchAndUpdateData = async () => {
-                try {
-                    const response = await fetch('/api/public_status');
-                    if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
-                    const liveData = await response.json();
-                    
-                    // --- KEY CHANGE 4: Update the globally scoped data variable ---
-                    latestStatusData = liveData; 
-                    
-                    updateDashboard(liveData);
-                } catch (error) {
-                    console.error("Could not fetch status data:", error);
+        }
+
+        function renderMapData(payload) {
+            const { gates, areas, routes } = payload;
+
+            // Update map center if we have it
+            if (payload.center) {
+                // Don't auto-pan — only set on first load
+                if (!pilgrimMap._initialSet) {
+                    pilgrimMap.setView(payload.center, payload.zoom || 17);
+                    pilgrimMap._initialSet = true;
                 }
-            };
+            }
 
-            const updateDashboard = (liveData) => {
-                let marqueeParts = [];
-                let anyQueueHighRisk = false;
-
-                for (const cameraId in cameraNames) {
-                    const status = liveData[cameraId];
-                    if (!status) continue;
-
-                    const waitSpan = document.getElementById(`wait-${cameraId}`);
-                    const messageSpan = document.getElementById(`message-${cameraId}`);
-                    const statusBox = document.getElementById(`status-box-${cameraId}`);
-                    const mapZone = document.getElementById(`status-zone-${cameraId}`);
-                    
-                    let crowdLevelClass = '';
-                    let messageText = '';
-                    let mapZoneClass = '';
-
-                    switch (status.situation) {
-                        case "Stampede in Progress":
-                            crowdLevelClass = 'bg-red-200 text-red-800';
-                            messageText = "Stampede Alert!";
-                            mapZoneClass = 'high';
-                            anyQueueHighRisk = true;
-                            break;
-                        case "High Risk of Stampede":
-                            crowdLevelClass = 'bg-orange-200 text-orange-800';
-                            messageText = "High Risk";
-                            mapZoneClass = 'warning';
-                            anyQueueHighRisk = true;
-                            break;
-                        case "Crowded":
-                            crowdLevelClass = 'bg-yellow-200 text-yellow-800';
-                            messageText = "Crowded";
-                            mapZoneClass = 'medium';
-                            break;
-                        case "Safe":
-                        default:
-                            crowdLevelClass = 'bg-green-200 text-green-800';
-                            messageText = "Safe";
-                            mapZoneClass = 'low';
-                            break;
-                    }
-                    
-                    if (statusBox) {
-                        statusBox.className = `status-box p-6 rounded-xl shadow-lg text-center ${crowdLevelClass}`;
-                        if (messageSpan) messageSpan.textContent = messageText;
-                        const personCount = status.person_count || 0;
-                        const estimatedWait = Math.max(0, Math.floor(personCount / 20));
-                        if (waitSpan) waitSpan.textContent = `${estimatedWait} mins`;
-                    }
-
-                    if (mapZone) {
-                        mapZone.classList.remove('low', 'medium', 'high', 'warning');
-                        mapZone.classList.add(mapZoneClass);
-                    }
-                    marqueeParts.push(`${cameraNames[cameraId]}: ${status.situation}`);
-                }
-
-                alertMarquee.textContent = marqueeParts.join(' || ') || "System running normally. No alerts.";
-
-                if (anyQueueHighRisk) {
-                    pilgrimButton.disabled = false;
-                    pilgrimButton.className = 'w-full md:w-auto py-4 px-6 rounded-xl font-bold text-lg text-white bg-red-500 hover:bg-red-600 transition-all duration-300 pulse-border';
+            gates.forEach(gate => {
+                const color = levelToColor(gate.level);
+                const html = `<div style="padding:4px 8px;border-radius:6px;background:rgba(17,24,39,0.9);border:1px solid rgba(148,163,184,0.2);font-family:'Outfit',sans-serif;">
+                    <div style="font-size:10px;font-weight:600;color:#f1f5f9;">${gate.name}</div>
+                    <div style="font-size:9px;color:${color};font-weight:600;margin-top:1px;">${gate.situation}</div>
+                </div>`;
+                if (!mapGateMarkers[gate.id]) {
+                    mapGateMarkers[gate.id] = L.marker([gate.lat, gate.lng], {
+                        icon: L.divIcon({ className: '', html, iconSize: [160, 36], iconAnchor: [80, 18] })
+                    }).addTo(pilgrimMap);
                 } else {
-                    pilgrimButton.disabled = true;
-                    pilgrimButton.className = 'w-full md:w-auto py-4 px-6 rounded-xl font-bold text-lg text-white bg-gray-400 cursor-not-allowed opacity-50';
-                }
-            };
-
-            fetchAndUpdateData();
-            setInterval(fetchAndUpdateData, 3000);
-
-            // --- KEY CHANGE 5: Updated button click listener to build the list ---
-            pilgrimButton.addEventListener('click', () => {
-                if (!pilgrimButton.disabled) {
-                    // 1. Clear any previous list items
-                    safeZonesList.innerHTML = '';
-                    let safeZonesFound = false;
-
-                    // 2. Loop through the latest data to find safe zones
-                    for (const cameraId in latestStatusData) {
-                        const status = latestStatusData[cameraId];
-                        if (status && status.situation === "Safe") {
-                            safeZonesFound = true;
-                            const friendlyName = cameraNames[cameraId] || cameraId;
-                            
-                            // 3. Create a new list item for each safe zone
-                            const listItemHtml = `
-                                <div class="bg-green-100 text-green-800 p-3 rounded-lg flex items-center transition-transform transform hover:scale-105">
-                                    <svg class="w-6 h-6 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    <span class="font-semibold">${friendlyName}</span>
-                                </div>
-                            `;
-                            safeZonesList.insertAdjacentHTML('beforeend', listItemHtml);
-                        }
-                    }
-
-                    // 4. If no safe zones were found, show a message
-                    if (!safeZonesFound) {
-                        const noSafeZonesHtml = `
-                            <p class="text-center text-gray-500">No areas are currently marked as safe. Please proceed with extreme caution and follow instructions from authorities.</p>
-                        `;
-                        safeZonesList.innerHTML = noSafeZonesHtml;
-                    }
-
-                    // 5. Finally, show the modal
-                    modal.classList.remove('hidden');
+                    mapGateMarkers[gate.id].setIcon(L.divIcon({ className: '', html, iconSize: [160, 36], iconAnchor: [80, 18] }));
                 }
             });
-            // --- END OF KEY CHANGE 5 ---
 
-            closeModalBtn.addEventListener('click', () => { modal.classList.add('hidden'); });
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) { modal.classList.add('hidden'); }
+            areas.forEach(area => {
+                const color = levelToColor(area.level);
+                if (!mapAreaLayers[area.id]) {
+                    mapAreaLayers[area.id] = L.circle([area.lat, area.lng], {
+                        radius: area.radius_m, color, fillColor: color, fillOpacity: 0.4, weight: 2
+                    }).addTo(pilgrimMap).bindPopup(`${area.name}<br><small>${area.situation}</small>`);
+                } else {
+                    mapAreaLayers[area.id].setStyle({ color, fillColor: color });
+                    mapAreaLayers[area.id].setPopupContent(`${area.name}<br><small>${area.situation}</small>`);
+                }
             });
+
+            routes.forEach(route => {
+                const color = levelToColor(route.level);
+                if (!mapRouteLayers[route.id]) {
+                    mapRouteLayers[route.id] = L.polyline(route.points, {
+                        color, weight: 6, opacity: 0.8
+                    }).addTo(pilgrimMap).bindPopup(`${route.name}<br><small>${route.situation}</small>`);
+                } else {
+                    mapRouteLayers[route.id].setStyle({ color });
+                    mapRouteLayers[route.id].setPopupContent(`${route.name}<br><small>${route.situation}</small>`);
+                }
+            });
+        }
+
+        async function pollMapData() {
+            try {
+                const r = await fetch('/api/map_data');
+                if (r.ok) renderMapData(await r.json());
+            } catch (e) { console.error('Map poll error', e); }
+        }
+
+        pollMapData();
+        setInterval(pollMapData, 3000);
+
+        // ============================
+        // STATUS POLLING + AUTO-SORT
+        // ============================
+        const fetchAndUpdateData = async () => {
+            try {
+                const r = await fetch('/api/public_status');
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const liveData = await r.json();
+                latestStatusData = liveData;
+                updateDashboard(liveData);
+            } catch (e) { console.error('Status error:', e); }
+        };
+
+        const riskPriority = { 'Stampede in Progress': 4, 'High Risk of Stampede': 3, 'Crowded': 2, 'Safe': 1 };
+
+        const updateDashboard = (liveData) => {
+            let marqueeParts = [];
+            let anyHighRisk = false;
+
+            // Build sorted entries
+            const entries = Object.keys(cameraNames).map(cid => ({
+                id: cid,
+                status: liveData[cid] || { situation: 'Initializing...', person_count: 0 }
+            })).sort((a, b) => (riskPriority[b.status.situation] || 0) - (riskPriority[a.status.situation] || 0));
+
+            // Reorder DOM cards
+            entries.forEach(entry => {
+                const card = document.getElementById(`status-box-${entry.id}`);
+                if (card) statusContainer.appendChild(card);
+            });
+
+            for (const { id, status } of entries) {
+                const waitEl = document.getElementById(`wait-${id}`);
+                const badgeEl = document.getElementById(`badge-${id}`);
+                const card = document.getElementById(`status-box-${id}`);
+                const personCount = status.person_count || 0;
+                const waitMins = Math.max(0, Math.floor(personCount / 20));
+
+                let levelClass = 'level-safe', badgeText = '✓ Safe';
+
+                switch (status.situation) {
+                    case 'Stampede in Progress':
+                        levelClass = 'level-stampede'; badgeText = '⚠ STAMPEDE'; anyHighRisk = true; break;
+                    case 'High Risk of Stampede':
+                        levelClass = 'level-risk'; badgeText = '⚡ High Risk'; anyHighRisk = true; break;
+                    case 'Crowded':
+                        levelClass = 'level-crowded'; badgeText = '🔶 Crowded'; break;
+                    default:
+                        levelClass = 'level-safe'; badgeText = '✓ Safe'; break;
+                }
+
+                if (card) card.className = `queue-card ${levelClass}`;
+                if (waitEl) waitEl.textContent = waitMins;
+                if (badgeEl) badgeEl.textContent = badgeText;
+
+                marqueeParts.push(`${cameraNames[id]}: ${status.situation}`);
+            }
+
+            alertMarquee.textContent = marqueeParts.join('  ·  ') || 'System running normally.';
+
+            if (anyHighRisk) {
+                pilgrimButton.disabled = false;
+                pilgrimButton.className = 'safety-btn active';
+            } else {
+                pilgrimButton.disabled = true;
+                pilgrimButton.className = 'safety-btn';
+            }
+        };
+
+        fetchAndUpdateData();
+        setInterval(fetchAndUpdateData, 3000);
+
+        // ============================
+        // SAFETY MODAL
+        // ============================
+        pilgrimButton.addEventListener('click', () => {
+            if (pilgrimButton.disabled) return;
+            safeZonesList.innerHTML = '';
+            let found = false;
+            for (const cid in latestStatusData) {
+                if (latestStatusData[cid]?.situation === 'Safe') {
+                    found = true;
+                    safeZonesList.insertAdjacentHTML('beforeend', `
+                        <div class="safe-zone-item">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>${cameraNames[cid] || cid}</span>
+                        </div>
+                    `);
+                }
+            }
+            if (!found) safeZonesList.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:13px;padding:12px;">No safe areas currently. Follow authority instructions.</p>';
+            modal.classList.add('visible');
         });
+
+        closeModalBtn.addEventListener('click', () => modal.classList.remove('visible'));
+        modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
+    });
     </script>
 </body>
 </html>

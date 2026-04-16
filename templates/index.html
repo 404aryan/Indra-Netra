@@ -3,139 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indra-Netra Crowd Safety Dashboard</title>
+    <title>Indra-Netra — Command Center</title>
+    <meta name="description" content="Real-time AI crowd safety monitoring dashboard. Predict congestion, trigger alerts, coordinate safe evacuations.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <style>
-        .status-safe { color: #16a34a; font-weight: bold; }
-        .status-crowded { color: #f59e0b; font-weight: bold; }
-        .status-risk { color: #f97316; font-weight: bold; }
-        .status-stampede { color: #dc2626; font-weight: bold; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
-        @keyframes blink-warning {
-            0% { background-color: #ffe4e6; border-color: #fb7185; }
-            50% { background-color: transparent; border-color: #fda4af; }
-            100% { background-color: #ffe4e6; border-color: #fb7185; }
-        }
-        .blinking-alert {
-            animation: blink-warning 1.5s infinite;
-            border-radius: 12px;
-        }
-        .critical-zone-warning {
-            background-color: #fff7ed;
-            border: 1px solid #fdba74;
-            border-radius: 12px;
-        }
-        .modal-card .form-hint {
-            font-size: 12px;
-            color: #94a3b8;
-        }
-    </style>
 </head>
 <body>
     <div class="body">
-        <div class="nav">
+
+        <!-- Top Bar: Brand + Pilgrim + Audio -->
+        <nav class="nav" id="main-nav">
             <div class="left">
-                <button>Dashboard</button>
-                <button>Analytics</button>
+                <span style="font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--accent); letter-spacing: 0.02em;">Indra-Netra</span>
             </div>
             <div class="right">
-                <button onclick="window.open('{{ url_for('pilgrim_page') }}', '_blank')">Pilgrim Site</button>
-                <div id="audio-permission" style="text-align: center; margin: 10px 0;">
-                    <button id="enable-audio-btn" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        🔔 Enable Alert Sounds
-                    </button>
+                <button id="nav-pilgrim-btn" onclick="window.open('{{ url_for('pilgrim_page') }}', '_blank')">🚶 Pilgrim Site</button>
+                <div id="audio-permission">
+                    <button id="enable-audio-btn">🔔 Enable Alerts</button>
                 </div>
             </div>
+        </nav>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav" id="tab-nav">
+            <button class="tab-btn active" data-tab="overview" id="tab-btn-overview">📊 Overview</button>
+            <button class="tab-btn" data-tab="cameras" id="tab-btn-cameras">📹 Cameras</button>
+            <button class="tab-btn" data-tab="analytics" id="tab-btn-analytics">📈 Analytics</button>
+            <button class="tab-btn" data-tab="settings" id="tab-btn-settings">⚙️ Settings</button>
         </div>
 
-        <div class="dashboard-hero">
-            <p style="text-transform: uppercase; letter-spacing: 0.3em; color:#7c3aed; font-weight: 600; margin:0 0 6px;">Authority Command Center</p>
-            <h1>Indra-Netra Crowd Safety Suite</h1>
-            <p>Real-time AI monitoring for any large gathering—predict congestion, trigger alerts, and coordinate safe evacuations.</p>
-            <div class="hero-metrics">
-                <div>
-                    <span id="stat-cameras">0</span>
-                    <label>Active Cameras</label>
+        <!-- ============================================================ -->
+        <!-- TAB 1: OVERVIEW -->
+        <!-- ============================================================ -->
+        <div class="tab-content active" data-tab="overview" id="tab-overview">
+
+            <!-- Hero Section -->
+            <section class="dashboard-hero" id="hero-section">
+                <p style="text-transform: uppercase; letter-spacing: 0.3em; color: var(--accent); font-weight: 600; font-size: 11px; margin: 0 0 8px;">Authority Command Center</p>
+                <h1>Indra-Netra</h1>
+                <p>Real-time AI monitoring for large gatherings — predict congestion, trigger alerts, and coordinate safe evacuations.</p>
+                <div class="hero-metrics">
+                    <div>
+                        <span id="stat-cameras">0</span>
+                        <label>Active Cameras</label>
+                    </div>
+                    <div>
+                        <span id="stat-prevented">0</span>
+                        <label>Stampedes Prevented</label>
+                    </div>
+                    <div>
+                        <span id="stat-alerts">0</span>
+                        <label>Alerts Triggered</label>
+                    </div>
+                    <div>
+                        <span id="stat-contacts">0</span>
+                        <label>Alert Contacts</label>
+                    </div>
                 </div>
-                <div>
-                    <span id="stat-prevented">0</span>
-                    <label>Stampedes Prevented</label>
+            </section>
+
+            <!-- Live System Status -->
+            <section class="analysis" id="system-status-section">
+                <h2>Live System Status</h2>
+                <div class="bottom">
+                    <div class="bar" id="crowd-density-bar">
+                        <span>Overall Crowd Density</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <div class="dataslot" id="crowd-density-slot">—</div>
+                        <div class="info">Based on worst-case zone</div>
+                    </div>
+                    <div class="bar" id="active-alerts-bar">
+                        <span>Active Alerts</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                        <div class="dataslot" id="active-alerts-slot">—</div>
+                        <div class="info">Stampedes in progress</div>
+                    </div>
+                    <div class="bar" id="critical-zones-bar">
+                        <span>Critical Zones</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+                        <div class="dataslot" id="critical-zones-slot">—</div>
+                        <div class="info">High risk of stampede</div>
+                    </div>
+                    <div class="bar" id="monitoring-zones-bar">
+                        <span>Monitoring Zones</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <div class="dataslot" id="monitoring-zones-slot">—</div>
+                        <div class="info">Total active cameras</div>
+                    </div>
                 </div>
-                <div>
-                    <span id="stat-alerts">0</span>
-                    <label>Alerts Triggered</label>
-                </div>
-                <div>
-                    <span id="stat-contacts">0</span>
-                    <label>Alert Contacts</label>
+            </section>
+
+            <!-- Recent Alerts (compact) -->
+            <div class="intel-card" id="alert-center-card" style="margin-bottom: 20px;">
+                <h3>Recent Alerts</h3>
+                <div id="alert-feed" class="alert-feed alert-feed-overview">
+                    <p style="color: var(--text-muted); font-size: 12px;">No alerts yet.</p>
                 </div>
             </div>
+
         </div>
 
-        <div class="action-toolbar">
-            <button class="primary" data-modal-target="camera-modal">➕ Add Camera Feed</button>
-            <button data-modal-target="location-modal">📍 Set Event Area</button>
-            <button data-modal-target="contact-modal">📨 Alert Contacts</button>
-            <button onclick="window.open('{{ url_for('live_map') }}', '_blank')">🗺 Open Live Map</button>
+        <!-- ============================================================ -->
+        <!-- TAB 2: CAMERAS -->
+        <!-- ============================================================ -->
+        <div class="tab-content" data-tab="cameras" id="tab-cameras">
+
+            <div class="tab-section-header">
+                <h2>Live Camera Feeds</h2>
+                <div class="cam-toolbar">
+                    <button class="primary" data-modal-target="camera-modal" id="add-camera-btn" style="padding: 10px 18px; border-radius: var(--radius-md); cursor: pointer; font-size: 13px; border: none; font-family: 'Outfit', sans-serif;">➕ Add Camera</button>
+                    <button onclick="window.open('{{ url_for('live_map') }}', '_blank')" id="open-map-btn" style="padding: 10px 18px; border-radius: var(--radius-md); cursor: pointer; font-size: 13px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); font-family: 'Outfit', sans-serif;">🗺 Live Map</button>
+                </div>
+            </div>
+
+            <div class="content" id="video-grid">
+                {% for cam_id in camera_ids %}
+                <div class="box" id="cam-box-{{ cam_id }}">
+                    <div class="vid">
+                        <img src="{{ url_for('video_feed', camera_id=cam_id) }}" alt="Live Feed for {{ cam_id }}" class="cctv" loading="lazy">
+                    </div>
+                    <div class="down" id="status-box-{{ cam_id }}">
+                        Location: Loading... <br>Situation: Loading...
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
         </div>
 
-        <div class="analysis">
-            <h2>Live System Status</h2>
-            <div class="bottom">
-                <div class="bar"><span>Overall Crowd Density</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><div class="dataslot" id="crowd-density-slot">...</div><div class="info">Based on worst-case zone</div></div>
-                <div class="bar" id="active-alerts-bar"><span>Active Alerts</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg><div class="dataslot" id="active-alerts-slot">...</div><div class="info">Stampedes in progress</div></div>
-                <div class="bar" id="critical-zones-bar"><span>Critical Zones</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg><div class="dataslot" id="critical-zones-slot">...</div><div class="info">High risk of stampede</div></div>
-                <div class="bar"><span>Monitoring Zones</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg><div class="dataslot" id="monitoring-zones-slot">...</div><div class="info">Total active cameras</div></div>
+        <!-- ============================================================ -->
+        <!-- TAB 3: ANALYTICS -->
+        <!-- ============================================================ -->
+        <div class="tab-content" data-tab="analytics" id="tab-analytics">
+
+            <div class="tab-section-header">
+                <h2>Analytics & Trends</h2>
             </div>
+
+            <div class="intel-grid" id="intel-grid">
+                <div class="intel-card" id="risk-trends-card">
+                    <h3>Risk Trends</h3>
+                    <div id="trend-list" class="trend-list">
+                        <p style="color: var(--text-muted); font-size: 12px;">Collecting live data...</p>
+                    </div>
+                </div>
+                <div class="intel-card" id="alert-history-card">
+                    <h3>Full Alert History</h3>
+                    <div id="alert-history-feed" class="alert-feed" style="max-height: 500px;">
+                        <p style="color: var(--text-muted); font-size: 12px;">No alerts yet.</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
-        <div class="event-grid">
-            <div class="event-card">
-                <h3>Event Area</h3>
-                <p id="event-name">Loading location...</p>
-                <p id="event-address" style="color:#475569;"></p>
-                <p id="event-coords" style="font-size:12px; color:#94a3b8;"></p>
-                <button data-modal-target="location-modal">Update Location</button>
+        <!-- ============================================================ -->
+        <!-- TAB 4: SETTINGS -->
+        <!-- ============================================================ -->
+        <div class="tab-content" data-tab="settings" id="tab-settings">
+
+            <div class="tab-section-header">
+                <h2>Configuration</h2>
             </div>
-            <div class="intel-card">
-                <h3>Alert Contacts</h3>
-                <div id="contacts-list" class="contacts-list">
-                    <p style="color:#94a3b8; font-size:12px;">No contacts added yet.</p>
+
+            <div class="settings-grid">
+                <div class="event-card" id="event-area-card">
+                    <h3>Event Area</h3>
+                    <p id="event-name">Loading location...</p>
+                    <p id="event-address" style="color: var(--text-secondary);"></p>
+                    <p id="event-coords" style="font-size: 12px; color: var(--text-muted);"></p>
+                    <button data-modal-target="location-modal" id="update-location-btn">📍 Update Location</button>
                 </div>
-                <button class="primary" data-modal-target="contact-modal" style="margin-top:16px;">➕ Add Contact</button>
+                <div class="intel-card" id="contacts-card">
+                    <h3>Alert Contacts</h3>
+                    <div id="contacts-list" class="contacts-list">
+                        <p style="color: var(--text-muted); font-size: 12px;">No contacts added yet.</p>
+                    </div>
+                    <button class="primary" data-modal-target="contact-modal" style="margin-top: 16px; padding: 10px 18px; border-radius: var(--radius-md); cursor: pointer; font-size: 13px; border: none; font-family: 'Outfit', sans-serif;" id="add-contact-btn">➕ Add Contact</button>
+                </div>
             </div>
+
         </div>
 
-        <div class="content">
-            {% for cam_id in camera_ids %}
-            <div class="box">
-                <div class="vid">
-                    <img src="{{ url_for('video_feed', camera_id=cam_id) }}" alt="Live Feed for {{ cam_id }}" class="cctv">
-                </div>
-                <div class="down" id="status-box-{{ cam_id }}">
-                    Location: Loading... <br>Situation: Loading...
-                </div>
-        </div>
-            {% endfor %}
-        </div>
-        
-        <div class="intel-grid">
-            <div class="intel-card">
-                <h3>Alert Center</h3>
-                <div id="alert-feed" class="alert-feed">
-                    <p style="color:#94a3b8; font-size:12px;">No alerts yet.</p>
-                </div>
-            </div>
-            <div class="intel-card">
-                <h3>Risk Trends</h3>
-                <div id="trend-list" class="trend-list">
-                    <p style="color:#94a3b8; font-size:12px;">Collecting live data...</p>
-                </div>
-            </div>
-        </div>
-
-        <footer class="dashboard-footer">
+        <!-- Footer (always visible) -->
+        <footer class="dashboard-footer" id="dashboard-footer">
             <div>
                 <p class="footer-label">System mode</p>
                 <p id="footer-status">Loading telemetry...</p>
@@ -153,36 +207,55 @@
 
     <!-- Camera Modal -->
     <div id="camera-modal" class="modal-overlay">
-        <div class="modal-card">
+        <div class="modal-card" style="max-width: 560px;">
             <button class="modal-close" data-close-modal="camera-modal">✕</button>
             <h3>Add Camera Feed</h3>
-            <form id="camera-form">
-                <input type="text" name="label" placeholder="Camera name (e.g., VIP Gate)" required>
-                <input type="text" name="camera_id" placeholder="Custom camera ID (optional)">
-                <input type="text" name="source" placeholder="RTSP / HTTP / MP4 path" required>
-                <button type="submit" class="submit">Save & Connect</button>
-                <p class="form-hint">We support RTSP streams, HTTP video URLs, and MP4 files for demos.</p>
-            </form>
+            <div style="background: rgba(232, 168, 48, 0.06); border: 1px solid rgba(232, 168, 48, 0.15); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 16px;">
+                <p style="font-size: 13px; font-weight: 600; color: var(--accent); margin: 0 0 8px;">📱 Using Your Phone as a Webcam</p>
+                <ol style="font-size: 12px; color: var(--text-secondary); margin: 0; padding-left: 18px; line-height: 1.8;">
+                    <li>Install <strong>IP Webcam</strong> (Android) or <strong>DroidCam</strong> (iOS/Android)</li>
+                    <li>Open the app and tap <strong>Start Server</strong></li>
+                    <li>Note the URL (e.g. <code style="background: var(--surface-3); padding: 1px 6px; border-radius: 4px; color: var(--accent-soft);">http://192.168.1.5:8080</code>)</li>
+                    <li>Enter: <code style="background: var(--surface-3); padding: 1px 6px; border-radius: 4px; color: var(--accent-soft);">http://&lt;IP&gt;:8080/video</code></li>
+                    <li>Phone and PC must be on <strong>same Wi-Fi</strong></li>
+                </ol>
             </div>
+            <form id="camera-form">
+                <input type="text" name="label" placeholder="Camera name (e.g., Main Gate Cam)" required>
+                <input type="text" name="camera_id" placeholder="Camera ID (optional, auto-generated)">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" name="source" id="camera-source-input" placeholder="http://192.168.x.x:8080/video" required style="flex: 1;">
+                    <button type="button" id="test-camera-btn" style="padding: 10px 16px; border-radius: var(--radius-sm); border: 1px solid rgba(232, 168, 48, 0.3); background: rgba(232, 168, 48, 0.08); color: var(--accent); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;">🔍 Test</button>
+                </div>
+                <p id="test-camera-result" class="form-hint" style="min-height: 18px;"></p>
+                <select name="zone_type">
+                    <option value="open_area">Open Area (General monitoring)</option>
+                    <option value="queue">Queue Line (High density expected)</option>
+                    <option value="gate">Gate / Exit (Flow control point)</option>
+                    <option value="darshan">Darshan Hall (Enclosed sacred area)</option>
+                </select>
+                <button type="submit" class="submit">🚀 Save & Start Detection</button>
+            </form>
         </div>
-        
+    </div>
+
     <!-- Location Modal -->
     <div id="location-modal" class="modal-overlay">
         <div class="modal-card" style="max-width: 640px;">
             <button class="modal-close" data-close-modal="location-modal">✕</button>
             <h3>Set Event Location</h3>
-            <div class="form-grid">
-                <input type="text" id="location-input" placeholder="Search temple / stadium / college" style="width:100%;">
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button type="button" id="location-search-btn" class="submit" style="flex:1; background:linear-gradient(to right,#0ea5e9,#2563eb);">Search</button>
-                    <button type="button" id="location-save-btn" class="submit" style="flex:1;">Save Location</button>
+            <div>
+                <input type="text" id="location-input" placeholder="Search temple / stadium / college" style="width: 100%;">
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button type="button" id="location-search-btn" class="submit" style="flex: 1;">Search</button>
+                    <button type="button" id="location-save-btn" class="submit" style="flex: 1; background: var(--surface-3); color: var(--text-primary);">Save Location</button>
                 </div>
             </div>
-            <p id="location-status" class="form-hint" style="margin-top:8px;"></p>
+            <p id="location-status" class="form-hint" style="margin-top: 8px;"></p>
             <div id="location-map" class="location-map"></div>
         </div>
-        </div>
-        
+    </div>
+
     <!-- Contact Modal -->
     <div id="contact-modal" class="modal-overlay">
         <div class="modal-card">
@@ -205,6 +278,32 @@
     <script>
     const cameraMetadata = {{ camera_labels | tojson }};
     document.addEventListener('DOMContentLoaded', function() {
+
+        // ============================================================
+        // TAB SYSTEM
+        // ============================================================
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        function switchTab(tabName) {
+            tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+            tabContents.forEach(content => content.classList.toggle('active', content.dataset.tab === tabName));
+            history.replaceState(null, '', '#' + tabName);
+        }
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        // Restore tab from URL hash
+        const initialTab = location.hash.replace('#', '') || 'overview';
+        if (['overview', 'cameras', 'analytics', 'settings'].includes(initialTab)) {
+            switchTab(initialTab);
+        }
+
+        // ============================================================
+        // AUDIO ALERTS
+        // ============================================================
         const alertSound = new Audio("{{ url_for('static', filename='alert.mp3') }}");
         alertSound.loop = true;
         let isAlertActive = false;
@@ -219,8 +318,8 @@
                 audioEnabled = true;
                 alertSound.pause();
                 alertSound.currentTime = 0;
-                enableAudioBtn.textContent = '🔊 Alerts Enabled';
-                enableAudioBtn.style.background = '#22c55e';
+                enableAudioBtn.textContent = '🔊 Alerts On';
+                enableAudioBtn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
                 setTimeout(() => {
                     document.getElementById('audio-permission').style.display = 'none';
                 }, 2000);
@@ -229,558 +328,305 @@
             });
         });
 
+        // ============================================================
+        // MODALS
+        // ============================================================
         const modals = document.querySelectorAll('.modal-overlay');
         document.querySelectorAll('[data-modal-target]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const target = btn.getAttribute('data-modal-target');
                 document.getElementById(target).classList.add('visible');
-                if (target === 'location-modal') {
-                    initLocationMap();
-                }
+                if (target === 'location-modal') initLocationMap();
             });
         });
         document.querySelectorAll('[data-close-modal]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const target = btn.getAttribute('data-close-modal');
-                document.getElementById(target).classList.remove('visible');
+                document.getElementById(btn.getAttribute('data-close-modal')).classList.remove('visible');
             });
         });
         modals.forEach(modal => modal.addEventListener('click', e => {
             if (e.target === modal) modal.classList.remove('visible');
         }));
 
+        // ============================================================
+        // HELPERS
+        // ============================================================
         function getCameraName(id) {
             return cameraMetadata[id] || id.replace(/_/g, ' ').toUpperCase();
         }
 
         function updateFooterClock() {
-            const now = new Date();
-            footerTimeEl.textContent = now.toLocaleTimeString();
+            footerTimeEl.textContent = new Date().toLocaleTimeString();
         }
 
+        // ============================================================
+        // STATUS POLLING
+        // ============================================================
         function updateAllStatuses() {
             fetch('/status/all')
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(all_data => {
-                    let activeAlerts = 0;
-                    let criticalZones = 0;
-                    const monitoringZones = Object.keys(all_data).length;
+                    let activeAlerts = 0, criticalZones = 0, crowdedCount = 0;
                     let isHighRiskPresent = false;
-                    let crowdedCount = 0;
+                    const monitoringZones = Object.keys(all_data).length;
 
                     for (const cam_id in all_data) {
                         if (!all_data.hasOwnProperty(cam_id)) continue;
                         const data = all_data[cam_id];
-                        const statusBox = document.getElementById(`status-box-${cam_id}`);
                         const situation = data.situation || 'N/A';
 
-                        if (situation === 'Stampede in Progress') {
-                            activeAlerts++;
-                            isHighRiskPresent = true;
-                        } else if (situation === 'High Risk of Stampede') {
-                            criticalZones++;
-                            isHighRiskPresent = true;
-                        } else if (situation === 'Crowded') {
-                            crowdedCount++;
-                        }
+                        if (situation === 'Stampede in Progress') { activeAlerts++; isHighRiskPresent = true; }
+                        else if (situation === 'High Risk of Stampede') { criticalZones++; isHighRiskPresent = true; }
+                        else if (situation === 'Crowded') { crowdedCount++; }
 
+                        const statusBox = document.getElementById(`status-box-${cam_id}`);
                         if (statusBox) {
-                            let situationClass = 'status-safe';
-                            if (situation.includes('Stampede')) situationClass = 'status-stampede';
-                            else if (situation.includes('High Risk')) situationClass = 'status-risk';
-                            else if (situation.includes('Crowded')) situationClass = 'status-crowded';
-                            statusBox.innerHTML = `
-                                <strong>${getCameraName(cam_id)}</strong><br>
-                                Situation: <span class="${situationClass}">${situation}</span><br>
-                                People: ${data.person_count || 0}
-                            `;
+                            let cls = 'status-safe';
+                            if (situation.includes('Stampede')) cls = 'status-stampede';
+                            else if (situation.includes('High Risk')) cls = 'status-risk';
+                            else if (situation.includes('Crowded')) cls = 'status-crowded';
+                            statusBox.innerHTML = `<strong>${getCameraName(cam_id)}</strong><br>Situation: <span class="${cls}">${situation}</span><br>People: ${data.person_count || 0}`;
                         }
                     }
 
-                    let crowdDensityText = 'Low';
-                    let densityClass = 'status-safe';
-                    if (isHighRiskPresent) {
-                        crowdDensityText = 'High';
-                        densityClass = 'status-stampede';
-                    } else if (monitoringZones > 0 && crowdedCount === monitoringZones) {
-                        crowdDensityText = 'Medium';
-                        densityClass = 'status-crowded';
-                    }
-                    const densitySlot = document.getElementById('crowd-density-slot');
-                    densitySlot.innerHTML = `<span class="${densityClass}">${crowdDensityText}</span>`;
+                    let crowdText = 'Low', densityCls = 'status-safe';
+                    if (isHighRiskPresent) { crowdText = 'High'; densityCls = 'status-stampede'; }
+                    else if (monitoringZones > 0 && crowdedCount === monitoringZones) { crowdText = 'Medium'; densityCls = 'status-crowded'; }
 
+                    document.getElementById('crowd-density-slot').innerHTML = `<span class="${densityCls}">${crowdText}</span>`;
                     document.getElementById('active-alerts-slot').innerText = activeAlerts;
                     document.getElementById('critical-zones-slot').innerText = criticalZones;
                     document.getElementById('monitoring-zones-slot').innerText = monitoringZones;
-                    footerStatusEl.textContent = `Monitoring ${monitoringZones} cameras • Crowd ${crowdDensityText}`;
+                    footerStatusEl.textContent = `Monitoring ${monitoringZones} cameras • Crowd ${crowdText}`;
 
-                    const activeAlertsBar = document.getElementById('active-alerts-bar');
-                    if (activeAlerts > 0) {
-                        activeAlertsBar.classList.add('blinking-alert');
-                    } else {
-                        activeAlertsBar.classList.remove('blinking-alert');
-                    }
+                    const aBar = document.getElementById('active-alerts-bar');
+                    aBar.classList.toggle('blinking-alert', activeAlerts > 0);
+                    const cBar = document.getElementById('critical-zones-bar');
+                    cBar.classList.toggle('critical-zone-warning', criticalZones > 0);
 
-                    const criticalZonesBar = document.getElementById('critical-zones-bar');
-                    if (criticalZones > 0) {
-                        criticalZonesBar.classList.add('critical-zone-warning');
-                    } else {
-                        criticalZonesBar.classList.remove('critical-zone-warning');
-                    }
-
-                    if (audioEnabled && activeAlerts > 0 && !isAlertActive) {
-                        alertSound.play().catch(() => {});
-                        isAlertActive = true;
-                    } else if ((activeAlerts === 0 || !audioEnabled) && isAlertActive) {
-                        alertSound.pause();
-                        alertSound.currentTime = 0;
-                        isAlertActive = false;
-                    }
+                    if (audioEnabled && activeAlerts > 0 && !isAlertActive) { alertSound.play().catch(()=>{}); isAlertActive = true; }
+                    else if ((activeAlerts === 0 || !audioEnabled) && isAlertActive) { alertSound.pause(); alertSound.currentTime = 0; isAlertActive = false; }
                 })
-                .catch(error => console.error('Error fetching status data:', error));
+                .catch(e => console.error('Status error:', e));
         }
 
+        // ============================================================
+        // ALERT FEEDS
+        // ============================================================
         function refreshAlertFeed() {
             fetch('/api/alert_log')
-                .then(res => res.json())
+                .then(r => r.json())
                 .then(alerts => {
+                    // Overview feed (compact, last 4)
                     const feed = document.getElementById('alert-feed');
                     feed.innerHTML = '';
                     if (!alerts.length) {
-                        feed.innerHTML = '<p style="color:#94a3b8; font-size:12px;">No alerts triggered.</p>';
+                        feed.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">No alerts triggered.</p>';
                         footerAlertEl.textContent = 'No alerts triggered.';
-                        return;
+                    } else {
+                        alerts.slice(0, 4).forEach((a, i) => {
+                            const d = document.createElement('div');
+                            d.className = 'alert-item';
+                            d.innerHTML = `<span>${a.alert_type} • ${new Date(a.timestamp+'Z').toLocaleTimeString()}</span><strong>${a.location}</strong><p style="margin:2px 0 0;">${a.details||''}</p>`;
+                            feed.appendChild(d);
+                            if (i === 0) footerAlertEl.textContent = `${a.alert_type} • ${a.location}`;
+                        });
                     }
-                    alerts.slice(0, 6).forEach((alert, idx) => {
-                        const item = document.createElement('div');
-                        item.className = 'alert-item';
-                        item.innerHTML = `
-                            <span>${alert.alert_type} • ${new Date(alert.timestamp + 'Z').toLocaleTimeString()}</span>
-                            <strong>${alert.location}</strong>
-                            <p style="margin:2px 0 0;">${alert.details || 'No details provided.'}</p>
-                        `;
-                        feed.appendChild(item);
-                        if (idx === 0) {
-                            footerAlertEl.textContent = `${alert.alert_type} • ${alert.location}`;
-                        }
-                    });
+
+                    // Analytics full feed
+                    const histFeed = document.getElementById('alert-history-feed');
+                    histFeed.innerHTML = '';
                     if (!alerts.length) {
-                        footerAlertEl.textContent = 'No alerts triggered.';
+                        histFeed.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">No alerts triggered.</p>';
+                    } else {
+                        alerts.forEach(a => {
+                            const d = document.createElement('div');
+                            d.className = 'alert-item';
+                            d.innerHTML = `<span>${a.alert_type} • ${new Date(a.timestamp+'Z').toLocaleTimeString()}</span><strong>${a.location}</strong><p style="margin:2px 0 0;">${a.details||''}</p>`;
+                            histFeed.appendChild(d);
+                        });
                     }
                 })
-                .catch(err => console.error('alert log error', err));
+                .catch(e => console.error('Alert error:', e));
         }
 
+        // ============================================================
+        // RISK TRENDS
+        // ============================================================
         function refreshRiskTrends() {
             fetch('/api/risk_history')
-                .then(res => res.json())
-                .then(historyPayload => {
-                    const trendList = document.getElementById('trend-list');
-                    trendList.innerHTML = '';
+                .then(r => r.json())
+                .then(payload => {
+                    const list = document.getElementById('trend-list');
+                    list.innerHTML = '';
+                    const cams = Object.keys(payload);
+                    if (!cams.length) { list.innerHTML = '<p style="color:var(--text-muted);">No cameras configured.</p>'; return; }
 
-                    const cameraIds = Object.keys(historyPayload);
-                    if (!cameraIds.length) {
-                        trendList.innerHTML = '<p style="color:#94a3b8;">No cameras configured yet.</p>';
-                        return;
-                    }
-
-                    cameraIds.forEach(camId => {
-                        const history = historyPayload[camId] || [];
+                    cams.forEach(camId => {
+                        const h = payload[camId] || [];
                         const item = document.createElement('div');
                         item.className = 'trend-item';
-
-                        if (history.length < 3) {
+                        if (h.length < 3) {
                             item.innerHTML = `<strong>${getCameraName(camId)}</strong><p>Collecting data...</p>`;
-                            trendList.appendChild(item);
-                            return;
+                        } else {
+                            const recent = h[h.length-1];
+                            const prev = h.slice(-4,-1);
+                            const avg = prev.reduce((a,e)=>a+e.risk,0)/prev.length;
+                            const delta = recent.risk - avg;
+                            let trend = 'Stable';
+                            if (delta > 0.08) trend = 'Rising ↑'; else if (delta < -0.08) trend = 'Falling ↓';
+                            const w = Math.min(Math.max(recent.risk*100,0),100);
+                            item.innerHTML = `<strong>${getCameraName(camId)}</strong><div class="trend-bar"><span style="width:${w}%"></span></div><p>Risk: ${(recent.risk*100).toFixed(0)}% • ${trend}</p><p style="color:var(--text-muted);">Last: ${recent.situation}</p>`;
                         }
-
-                        const recent = history[history.length - 1];
-                        const prevSlice = history.slice(-4, -1);
-                        const prevAvg = prevSlice.reduce((acc, entry) => acc + entry.risk, 0) / prevSlice.length;
-                        const delta = recent.risk - prevAvg;
-
-                        let trendLabel = 'Stable';
-                        if (delta > 0.08) trendLabel = 'Rising';
-                        else if (delta < -0.08) trendLabel = 'Falling';
-
-                        const barWidth = Math.min(Math.max(recent.risk * 100, 0), 100);
-                        item.innerHTML = `
-                            <strong>${getCameraName(camId)}</strong>
-                            <div class="trend-bar"><span style="width:${barWidth}%;"></span></div>
-                            <p>Risk: ${(recent.risk * 100).toFixed(0)}% • Trend: ${trendLabel}</p>
-                            <p style="color:#475569;">Last event: ${recent.situation}</p>
-                        `;
-                        trendList.appendChild(item);
+                        list.appendChild(item);
                     });
                 })
-                .catch(err => console.error('risk history error', err));
+                .catch(e => console.error('Trends error:', e));
         }
 
+        // ============================================================
+        // SYSTEM STATS & EVENT CARD
+        // ============================================================
+        let cachedEventLocation = null;
         function loadSystemStats() {
-            fetch('/api/system_stats')
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById('stat-cameras').textContent = data.active_cameras;
-                    document.getElementById('stat-prevented').textContent = data.stampedes_prevented;
-                    document.getElementById('stat-alerts').textContent = data.stampede_alerts + data.high_risk_events;
-                    document.getElementById('stat-contacts').textContent = data.contacts_count;
-                    updateEventCard(data.event_location);
-                });
+            fetch('/api/system_stats').then(r=>r.json()).then(d => {
+                document.getElementById('stat-cameras').textContent = d.active_cameras;
+                document.getElementById('stat-prevented').textContent = d.stampedes_prevented;
+                document.getElementById('stat-alerts').textContent = d.stampede_alerts + d.high_risk_events;
+                document.getElementById('stat-contacts').textContent = d.contacts_count;
+                updateEventCard(d.event_location);
+            });
         }
 
-        function updateEventCard(event) {
-            if (!event) return;
-            document.getElementById('event-name').textContent = event.name || 'Event area not set';
-            document.getElementById('event-address').textContent = event.address || '';
-            document.getElementById('event-coords').textContent = `Lat ${Number(event.lat).toFixed(4)}, Lng ${Number(event.lng).toFixed(4)}`;
-            cachedEventLocation = event;
+        function updateEventCard(ev) {
+            if (!ev) return;
+            document.getElementById('event-name').textContent = ev.name || 'Not set';
+            document.getElementById('event-address').textContent = ev.address || '';
+            document.getElementById('event-coords').textContent = `Lat ${Number(ev.lat).toFixed(4)}, Lng ${Number(ev.lng).toFixed(4)}`;
+            cachedEventLocation = ev;
             if (locationMarker && locationMap) {
-                locationMarker.setLatLng([event.lat, event.lng]);
-                locationMap.setView([event.lat, event.lng], 17);
+                locationMarker.setLatLng([ev.lat, ev.lng]);
+                locationMap.setView([ev.lat, ev.lng], 17);
             }
         }
 
         function loadContactsList() {
-            fetch('/api/contacts')
-                .then(res => res.json())
-                .then(contacts => {
-                    const list = document.getElementById('contacts-list');
-                    list.innerHTML = '';
-                    if (!contacts.length) {
-                        list.innerHTML = '<p style="color:#94a3b8; font-size:12px;">No contacts added yet.</p>';
-                        return;
-                    }
-                    contacts.forEach(contact => {
-                        const item = document.createElement('div');
-                        item.className = 'contact-chip';
-                        item.innerHTML = `
-                            <strong>${contact.name}</strong>
-                            <span>${contact.channel.toUpperCase()}</span>
-                            ${contact.value}
-                        `;
-                        list.appendChild(item);
-                    });
+            fetch('/api/contacts').then(r=>r.json()).then(contacts => {
+                const list = document.getElementById('contacts-list');
+                list.innerHTML = '';
+                if (!contacts.length) { list.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">No contacts added yet.</p>'; return; }
+                contacts.forEach(c => {
+                    const d = document.createElement('div');
+                    d.className = 'contact-chip';
+                    d.innerHTML = `<strong>${c.name}</strong><span>${c.channel.toUpperCase()}</span>${c.value}`;
+                    list.appendChild(d);
                 });
+            });
         }
 
-        const cameraForm = document.getElementById('camera-form');
-        cameraForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(cameraForm);
-            let camera_id = formData.get('camera_id').trim();
-            const label = formData.get('label').trim();
-            const source = formData.get('source').trim();
-            if (!camera_id) {
-                camera_id = label.toLowerCase().replace(/\s+/g, '_');
-            }
+        // ============================================================
+        // CAMERA FORM
+        // ============================================================
+        document.getElementById('test-camera-btn').addEventListener('click', async () => {
+            const src = document.getElementById('camera-source-input').value.trim();
+            const res_el = document.getElementById('test-camera-result');
+            const btn = document.getElementById('test-camera-btn');
+            if (!src) { res_el.textContent='Enter a URL first.'; res_el.style.color='var(--danger)'; return; }
+            btn.textContent='⏳ Testing...'; btn.disabled=true;
+            res_el.textContent='Connecting...'; res_el.style.color='var(--text-muted)';
             try {
-                const res = await fetch('/api/cameras', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ camera_id, label, source })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Unable to add camera');
-                alert('Camera added. Refreshing dashboard to display feed.');
-                window.location.reload();
-            } catch (err) {
-                alert(err.message);
-            }
+                const r = await fetch('/api/test_camera',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:src})});
+                const d = await r.json();
+                res_el.textContent = d.ok ? '✅ '+d.message : '❌ '+d.error;
+                res_el.style.color = d.ok ? 'var(--safe)' : 'var(--danger)';
+            } catch(e) { res_el.textContent='❌ Network error'; res_el.style.color='var(--danger)'; }
+            finally { btn.textContent='🔍 Test'; btn.disabled=false; }
         });
 
-        const contactForm = document.getElementById('contact-form');
-        contactForm.addEventListener('submit', async (e) => {
+        document.getElementById('camera-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(contactForm);
+            const fd = new FormData(e.target);
+            let cid = fd.get('camera_id').trim();
+            const label = fd.get('label').trim(), source = fd.get('source').trim(), zone = fd.get('zone_type');
+            if (!cid) cid = label.toLowerCase().replace(/\s+/g,'_');
             try {
-                const res = await fetch('/api/contacts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: formData.get('name'),
-                        channel: formData.get('channel'),
-                        value: formData.get('value')
-                    })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Unable to add contact');
+                const r = await fetch('/api/cameras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({camera_id:cid,label,source,zone_type:zone})});
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.error||'Failed');
+                alert('✅ Camera added! Refreshing...'); window.location.reload();
+            } catch(e) { alert('❌ '+e.message); }
+        });
+
+        document.getElementById('contact-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            try {
+                const r = await fetch('/api/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fd.get('name'),channel:fd.get('channel'),value:fd.get('value')})});
+                if (!(await r.json()).status) throw new Error('Failed');
                 loadContactsList();
                 document.getElementById('contact-modal').classList.remove('visible');
-                contactForm.reset();
-            } catch (err) {
-                alert(err.message);
-            }
+                e.target.reset();
+            } catch(e) { alert(e.message); }
         });
 
-        let locationMap;
-        let locationMarker;
-        let pendingLocation = null;
-        let cachedEventLocation = null;
+        // ============================================================
+        // LOCATION MAP
+        // ============================================================
+        let locationMap, locationMarker, pendingLocation = null;
 
         function initLocationMap() {
             if (locationMap) return;
-            locationMap = L.map('location-map', {
-                zoomControl: true
-            }).setView([12.9718, 77.5949], 17);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(locationMap);
-            locationMarker = L.marker([12.9718, 77.5949]).addTo(locationMap);
-            if (cachedEventLocation) {
-                locationMarker.setLatLng([cachedEventLocation.lat, cachedEventLocation.lng]);
-                locationMap.setView([cachedEventLocation.lat, cachedEventLocation.lng], 17);
-            }
+            locationMap = L.map('location-map',{zoomControl:true}).setView([12.9718,77.5949],17);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}).addTo(locationMap);
+            locationMarker = L.marker([12.9718,77.5949]).addTo(locationMap);
+            if (cachedEventLocation) { locationMarker.setLatLng([cachedEventLocation.lat,cachedEventLocation.lng]); locationMap.setView([cachedEventLocation.lat,cachedEventLocation.lng],17); }
         }
 
         document.getElementById('location-search-btn').addEventListener('click', async () => {
-            const query = document.getElementById('location-input').value.trim();
-            const statusEl = document.getElementById('location-status');
-            if (!query) {
-                statusEl.textContent = 'Enter a location name.';
-                return;
-            }
-            statusEl.textContent = 'Searching...';
+            const q = document.getElementById('location-input').value.trim();
+            const s = document.getElementById('location-status');
+            if (!q) { s.textContent='Enter a location.'; return; }
+            s.textContent='Searching...';
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&polygon_geojson=1&q=${encodeURIComponent(query)}`);
-                const data = await res.json();
-                if (!data.length) {
-                    statusEl.textContent = 'No results found.';
-                    return;
-                }
-                const place = data[0];
-                pendingLocation = {
-                    name: place.display_name,
-                    address: place.display_name,
-                    lat: parseFloat(place.lat),
-                    lng: parseFloat(place.lon)
-                };
-                statusEl.textContent = 'Location found. Click save to apply.';
-                locationMarker.setLatLng([pendingLocation.lat, pendingLocation.lng]);
-                if (place.boundingbox) {
-                    const bounds = [
-                        [parseFloat(place.boundingbox[0]), parseFloat(place.boundingbox[2])],
-                        [parseFloat(place.boundingbox[1]), parseFloat(place.boundingbox[3])]
-                    ];
-                    locationMap.fitBounds(bounds);
-                } else {
-                    locationMap.setView([pendingLocation.lat, pendingLocation.lng], 17);
-                }
-            } catch (err) {
-                statusEl.textContent = 'Search failed. Try again.';
-            }
+                const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&polygon_geojson=1&q=${encodeURIComponent(q)}`);
+                const d = await r.json();
+                if (!d.length) { s.textContent='No results.'; return; }
+                const p = d[0];
+                pendingLocation = {name:p.display_name,address:p.display_name,lat:parseFloat(p.lat),lng:parseFloat(p.lon)};
+                s.textContent='Found! Click save.';
+                locationMarker.setLatLng([pendingLocation.lat,pendingLocation.lng]);
+                if (p.boundingbox) locationMap.fitBounds([[parseFloat(p.boundingbox[0]),parseFloat(p.boundingbox[2])],[parseFloat(p.boundingbox[1]),parseFloat(p.boundingbox[3])]]);
+                else locationMap.setView([pendingLocation.lat,pendingLocation.lng],17);
+            } catch(e) { s.textContent='Search failed.'; }
         });
 
         document.getElementById('location-save-btn').addEventListener('click', async () => {
-            const statusEl = document.getElementById('location-status');
-            if (!pendingLocation) {
-                statusEl.textContent = 'Search for a location first.';
-                return;
-            }
+            const s = document.getElementById('location-status');
+            if (!pendingLocation) { s.textContent='Search first.'; return; }
             try {
-                const res = await fetch('/api/event_location', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(pendingLocation)
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Unable to save location');
-                statusEl.textContent = 'Location saved successfully.';
+                const r = await fetch('/api/event_location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pendingLocation)});
+                if (!r.ok) throw new Error('Failed');
+                s.textContent='Saved!';
                 document.getElementById('location-modal').classList.remove('visible');
                 loadSystemStats();
-            } catch (err) {
-                statusEl.textContent = err.message;
-            }
+            } catch(e) { s.textContent=e.message; }
         });
 
+        // ============================================================
+        // INIT
+        // ============================================================
         loadSystemStats();
         loadContactsList();
         setInterval(loadSystemStats, 10000);
-
         updateFooterClock();
         setInterval(updateFooterClock, 1000);
-
         setInterval(updateAllStatuses, 2000);
         updateAllStatuses();
-
         refreshAlertFeed();
         refreshRiskTrends();
         setInterval(refreshAlertFeed, 6000);
         setInterval(refreshRiskTrends, 6000);
     });
     </script>
-</body>
-</html>
-
-
-        const cameraFriendlyNames = {
-            "temple_darshan_zone1": "Darshan Hall",
-            "temple_queue_cam1": "Gate 1 Queue",
-            "temple_queue_cam2": "Gate 2 Queue",
-            "temple_outer_queue1": "Outer Queue",
-            "temple_flow_gate2": "Gate Flow"
-        };
-
-        function updateAllStatuses() {
-            fetch('/status/all')
-                .then(response => response.json())
-                .then(all_data => {
-                    let activeAlerts = 0;
-                    let criticalZones = 0;
-                    const monitoringZones = Object.keys(all_data).length;
-                    let isHighRiskPresent = false;
-                    let crowdedCount = 0;
-
-                    for (const cam_id in all_data) {
-                        if (all_data.hasOwnProperty(cam_id)) {
-                            const data = all_data[cam_id];
-                            const statusBox = document.getElementById(`status-box-${cam_id}`);
-                            const situation = data.situation || 'N/A';
-                            
-                            if (situation === 'Stampede in Progress') { 
-                                activeAlerts++; 
-                                isHighRiskPresent = true;
-                            } else if (situation === 'High Risk of Stampede') { 
-                                criticalZones++; 
-                                isHighRiskPresent = true;
-                            } else if (situation === 'Crowded') { 
-                                crowdedCount++; 
-                            }
-
-                            if (statusBox) {
-                                let situationClass = 'status-safe';
-                                if (situation.includes('Stampede in Progress')) { situationClass = 'status-stampede';
-                                } else if (situation.includes('High Risk')) { situationClass = 'status-risk';
-                                } else if (situation.includes('Crowded')) { situationClass = 'status-crowded'; }
-                                statusBox.innerHTML = `<strong>Location:</strong> ${data.location} <br> <strong>Situation:</strong> <span class="${situationClass}">${situation}</span>`;
-                            }
-                        }
-                    }
-
-                    let crowdDensityText = 'Low';
-                    let densityClass = 'status-safe';
-                    if (isHighRiskPresent) { 
-                        crowdDensityText = 'High'; 
-                        densityClass = 'status-stampede';
-                    } else if (monitoringZones > 0 && crowdedCount === monitoringZones) { 
-                        crowdDensityText = 'Medium'; 
-                        densityClass = 'status-crowded'; 
-                    }
-                    const densitySlot = document.getElementById('crowd-density-slot');
-                    densitySlot.innerHTML = `<span class="${densityClass}">${crowdDensityText}</span>`;
-                    
-                    document.getElementById('active-alerts-slot').innerText = activeAlerts;
-                    document.getElementById('critical-zones-slot').innerText = criticalZones;
-                    document.getElementById('monitoring-zones-slot').innerText = monitoringZones;
-
-                    const activeAlertsBar = document.getElementById('active-alerts-bar');
-                    if (activeAlerts > 0) {
-                        activeAlertsBar.classList.add('blinking-alert');
-                    } else {
-                        activeAlertsBar.classList.remove('blinking-alert');
-                    }
-
-                    const criticalZonesBar = document.getElementById('critical-zones-bar');
-                    if (criticalZones > 0) {
-                        criticalZonesBar.classList.add('critical-zone-warning');
-                    } else {
-                        criticalZonesBar.classList.remove('critical-zone-warning');
-                    }
-                    
-                    // --- MODIFIED AUDIO LOGIC ---
-                    if (audioEnabled && activeAlerts > 0 && !isAlertActive) {
-                        alertSound.play().catch(error => console.log("Audio play failed:", error));
-                        isAlertActive = true;
-                    } else if ((activeAlerts === 0 || !audioEnabled) && isAlertActive) {
-                        alertSound.pause();
-                        alertSound.currentTime = 0;
-                        isAlertActive = false;
-                    }
-
-                    for (const zone in zones) {
-                        const camId = zoneToCamera[zone];
-                        if (all_data[camId]) {
-                            setZoneColor(zones[zone], zone, all_data[camId].situation);
-                        }
-                    }
-                })
-                .catch(error => console.error('Error fetching status data:', error));
-        }
-    
-        setInterval(updateAllStatuses, 2000);
-        updateAllStatuses();
-
-        // --- Alert Center + Risk Trends ---
-        function refreshAlertFeed() {
-            fetch('/api/alert_log')
-                .then(res => res.json())
-                .then(alerts => {
-                    const feed = document.getElementById('alert-feed');
-                    feed.innerHTML = '';
-                    if (!alerts.length) {
-                        feed.innerHTML = '<p style="color:#94a3b8; font-size:12px;">No alerts triggered.</p>';
-                        return;
-                    }
-                    alerts.slice(0, 6).forEach(alert => {
-                        const item = document.createElement('div');
-                        item.className = 'alert-item';
-                        item.innerHTML = `
-                            <span>${alert.alert_type} • ${new Date(alert.timestamp + 'Z').toLocaleTimeString()}</span>
-                            <strong>${alert.location}</strong>
-                            <p style="margin:2px 0 0;">${alert.details || 'No details provided.'}</p>
-                        `;
-                        feed.appendChild(item);
-                    });
-                })
-                .catch(err => console.error('alert log error', err));
-        }
-
-        function refreshRiskTrends() {
-            fetch('/api/risk_history')
-                .then(res => res.json())
-                .then(historyPayload => {
-                    const trendList = document.getElementById('trend-list');
-                    trendList.innerHTML = '';
-
-                    Object.keys(cameraFriendlyNames).forEach(camId => {
-                        const history = historyPayload[camId] || [];
-                        const item = document.createElement('div');
-                        item.className = 'trend-item';
-
-                        if (history.length < 3) {
-                            item.innerHTML = `<strong>${cameraFriendlyNames[camId]}</strong><p>Collecting data...</p>`;
-                            trendList.appendChild(item);
-                            return;
-                        }
-
-                        const recent = history[history.length - 1];
-                        const prevSlice = history.slice(-4, -1);
-                        const prevAvg = prevSlice.reduce((acc, entry) => acc + entry.risk, 0) / prevSlice.length;
-                        const delta = recent.risk - prevAvg;
-
-                        let trendLabel = 'Stable';
-                        if (delta > 0.08) trendLabel = 'Rising';
-                        else if (delta < -0.08) trendLabel = 'Falling';
-
-                        const barWidth = Math.min(Math.max(recent.risk * 100, 0), 100);
-                        item.innerHTML = `
-                            <strong>${cameraFriendlyNames[camId]}</strong>
-                            <div class="trend-bar"><span style="width:${barWidth}%;"></span></div>
-                            <p>Risk: ${(recent.risk * 100).toFixed(0)}% • Trend: ${trendLabel}</p>
-                            <p style="color:#94a3b8;">Last event: ${recent.situation}</p>
-                        `;
-                        trendList.appendChild(item);
-                    });
-                })
-                .catch(err => console.error('risk history error', err));
-        }
-
-        refreshAlertFeed();
-        refreshRiskTrends();
-        setInterval(refreshAlertFeed, 6000);
-        setInterval(refreshRiskTrends, 6000);
-    });
-</script>
 </body>
 </html>
