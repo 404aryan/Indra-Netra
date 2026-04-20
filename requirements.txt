@@ -1,10 +1,12 @@
 setuptools>=65.0.0
 wheel>=0.40.0
+gunicorn==21.2.0
 flask==2.3.3
 flask-cors==4.0.0
-opencv-python==4.8.1.78
-ultralytics==8.0.186
 numpy==1.24.3
+opencv-python-headless==4.8.1.78
 requests==2.31.0
-gunicorn==21.2.0
-torch==2.0.1
+Pillow>=9.0.0
+PyYAML>=5.4.1
+ultralytics==8.0.186
+tensorboard>=2.10.0
