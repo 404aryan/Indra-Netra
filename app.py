@@ -20,7 +20,7 @@ from email.message import EmailMessage
 
 # --- Flask App Setup & Secret Key for Sessions ---
 app = Flask(__name__)
-app.secret_key = 'your_super_secret_key_for_session' # Change this to a random string
+app.secret_key = 'f05cecd150101fcb5a20eb6697e917d830ce3fa3202563aee76b3120c7fee5c2'
 
 # --- Dummy Authority Credentials (Replace with a database in a real application) ---
 AUTHORITY_USERS = {
@@ -774,4 +774,4 @@ if __name__ == '__main__':
         thread = threading.Thread(target=run_stampede_detection, args=(cam_id, path, shared_model), daemon=True)
         thread.start()
     
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

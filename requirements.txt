@@ -4,3 +4,4 @@ opencv-python==4.8.1.78
 ultralytics==8.0.186
 numpy==1.24.3
 requests==2.31.0
+gunicorn==21.2.0
