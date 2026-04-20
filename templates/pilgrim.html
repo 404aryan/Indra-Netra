@@ -1,532 +1,896 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indra-Netra — Pilgrim Guide</title>
-    <meta name="description" content="Live crowd status, queue times, and interactive crowd map for pilgrims. Find safe routes and avoid congestion.">
+    <title>Indra-Netra — Pilgrimage Guide</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         :root {
-            --surface-0: #0a0e17;
-            --surface-1: #111827;
-            --surface-2: #1a2233;
-            --surface-3: #232d3f;
-            --accent: #e8a830;
-            --accent-dim: #b8841e;
-            --accent-soft: #f6d06b;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --text-inverse: #0a0e17;
-            --border: rgba(148, 163, 184, 0.12);
-            --safe: #34d399;
-            --safe-border: rgba(52, 211, 153, 0.25);
-            --warning: #fbbf24;
-            --warning-border: rgba(251, 191, 36, 0.25);
-            --danger: #fb923c;
-            --critical: #ef4444;
-            --critical-border: rgba(239, 68, 68, 0.35);
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-            --radius-full: 999px;
-            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+            --primary: #d4a574;
+            --primary-dark: #8b6f47;
+            --primary-light: #e8d4c4;
+            --bg-dark: #0f1419;
+            --bg-darker: #0a0d12;
+            --bg-card: #1a1f2a;
+            --bg-hover: #242a38;
+            --text-primary: #f5f1ed;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-safe: #34d399;
+            --accent-warn: #fbbf24;
+            --accent-danger: #fb923c;
+            --accent-critical: #ef4444;
+            --border-color: rgba(212, 165, 116, 0.15);
+            --border-light: rgba(212, 165, 116, 0.08);
         }
+
+        html { scroll-behavior: smooth; }
 
         body {
-            font-family: "Outfit", system-ui, sans-serif;
-            background: var(--surface-0);
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
             color: var(--text-primary);
+            line-height: 1.6;
             min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
         }
 
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            opacity: 0.025;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            background-repeat: repeat;
-            background-size: 256px;
-        }
-
-        .page-wrapper {
-            position: relative;
-            z-index: 1;
-            max-width: 900px;
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 16px 16px 60px;
+            padding: 0 20px;
         }
 
-        /* Header */
+        /* ========== HEADER ========== */
         header {
-            text-align: center;
-            background: radial-gradient(ellipse at 30% 0%, rgba(232,168,48,0.06), transparent 50%), var(--surface-1);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 28px 20px 18px;
-            margin-bottom: 20px;
-            box-shadow: var(--shadow-lg);
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border-light);
+            background: linear-gradient(180deg, rgba(212,165,116,0.05) 0%, transparent 100%);
         }
 
-        .brand-tag {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.25em;
-            color: var(--accent);
-            font-weight: 600;
+        .header-content h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 8px;
+            letter-spacing: -1px;
         }
 
-        header h1 {
-            font-family: "DM Serif Display", Georgia, serif;
-            font-size: 28px;
-            font-weight: 400;
-            color: var(--text-primary);
-            margin: 4px 0;
-        }
-
-        header .subtitle {
+        .header-content p {
+            font-size: 16px;
             color: var(--text-secondary);
-            font-size: 13px;
+            font-weight: 300;
         }
 
-        /* Marquee */
-        .marquee-wrap {
-            margin-top: 14px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-full);
-            padding: 8px 16px;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-
-        .marquee-text {
+        .header-tag {
             display: inline-block;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--accent-soft);
-            animation: marquee 25s linear infinite;
-        }
-
-        @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-
-        /* Section Labels */
-        .section-label {
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.16em;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        #system-status {
+            font-family: 'Space Grotesk', sans-serif;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+        }
+
+        /* ========== SEARCH SECTION ========== */
+        .search-section {
+            padding: 40px 0;
+        }
+
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 12px;
+            background: var(--bg-card);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .search-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+        }
+
+        .search-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            padding: 12px 16px;
+            outline: none;
+        }
+
+        .search-input::placeholder {
             color: var(--text-muted);
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            margin-top: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            z-index: 100;
+        }
+
+        .search-suggestions.active {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .suggestion-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-name {
             font-weight: 600;
-            margin: 24px 0 12px;
-            padding-left: 2px;
+            color: var(--primary);
+            font-size: 14px;
         }
 
-        /* Queue Cards */
-        .queue-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 10px;
-        }
-
-        .queue-card {
-            padding: 16px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            background: var(--surface-1);
-            text-align: center;
-            transition: all 0.4s var(--ease-out);
-        }
-
-        .queue-card .queue-name {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 6px;
-        }
-
-        .queue-card .wait-time {
-            font-family: "DM Serif Display", Georgia, serif;
-            font-size: 32px;
-            font-weight: 400;
-            line-height: 1.1;
-        }
-
-        .queue-card .wait-unit {
-            font-family: "Outfit", sans-serif;
+        .suggestion-meta {
             font-size: 12px;
             color: var(--text-muted);
             margin-top: 2px;
         }
 
-        .queue-card .status-badge {
-            display: inline-block;
-            margin-top: 8px;
-            padding: 3px 10px;
-            border-radius: var(--radius-full);
-            font-size: 11px;
+        .search-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #000;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
             font-weight: 600;
-            letter-spacing: 0.04em;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
         }
 
-        /* Card level states */
-        .queue-card.level-safe { border-color: var(--safe-border); }
-        .queue-card.level-safe .wait-time { color: var(--safe); }
-        .queue-card.level-safe .status-badge { background: rgba(52,211,153,0.1); color: var(--safe); border: 1px solid var(--safe-border); }
-
-        .queue-card.level-crowded { border-color: var(--warning-border); }
-        .queue-card.level-crowded .wait-time { color: var(--warning); }
-        .queue-card.level-crowded .status-badge { background: rgba(251,191,36,0.1); color: var(--warning); border: 1px solid var(--warning-border); }
-
-        .queue-card.level-risk { border-color: rgba(249,115,22,0.3); }
-        .queue-card.level-risk .wait-time { color: var(--danger); }
-        .queue-card.level-risk .status-badge { background: rgba(249,115,22,0.1); color: var(--danger); border: 1px solid rgba(249,115,22,0.3); }
-
-        .queue-card.level-stampede { border-color: var(--critical-border); animation: card-pulse 2s ease-in-out infinite; }
-        .queue-card.level-stampede .wait-time { color: var(--critical); }
-        .queue-card.level-stampede .status-badge { background: rgba(239,68,68,0.12); color: var(--critical); border: 1px solid var(--critical-border); }
-
-        @keyframes card-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.2); }
-            50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(212, 165, 116, 0.25);
         }
 
-        /* Embedded Leaflet Map */
-        .map-embed {
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            overflow: hidden;
-            box-shadow: var(--shadow-md);
-            background: var(--surface-1);
+        /* ========== LOCATION DETAIL CARD ========== */
+        .location-detail {
+            display: none;
+            animation: slideDown 0.4s ease;
         }
 
-        #pilgrim-map {
-            width: 100%;
-            height: 360px;
+        .location-detail.active {
+            display: block;
         }
 
-        .map-legend {
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-card {
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(212, 165, 116, 0.03) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 40px;
+        }
+
+        .detail-header {
             display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            padding: 10px 14px;
-            background: var(--surface-2);
-            border-top: 1px solid var(--border);
-            font-size: 11px;
-            color: var(--text-secondary);
+            align-items: baseline;
+            gap: 16px;
+            margin-bottom: 28px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
         }
 
-        .legend-dot {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
+        .detail-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--primary);
         }
 
-        .legend-dot::before {
-            content: "";
-            width: 10px;
-            height: 3px;
-            border-radius: var(--radius-full);
+        .detail-category {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
-        .legend-dot.l-safe::before { background: var(--safe); }
-        .legend-dot.l-med::before { background: var(--warning); }
-        .legend-dot.l-high::before { background: var(--danger); }
-        .legend-dot.l-block::before { background: var(--critical); }
+        .detail-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
 
-        /* Safety Button */
-        .safety-action {
-            margin-top: 20px;
+        .stat-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 20px;
             text-align: center;
         }
 
-        .safety-btn {
-            padding: 14px 24px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            background: var(--surface-2);
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
             color: var(--text-muted);
-            font-family: "Outfit", sans-serif;
-            font-size: 14px;
+            margin-bottom: 8px;
             font-weight: 600;
-            cursor: not-allowed;
-            opacity: 0.5;
-            transition: all 0.3s var(--ease-out);
-            width: 100%;
-            max-width: 400px;
         }
 
-        .safety-btn.active {
-            cursor: pointer;
-            opacity: 1;
-            background: linear-gradient(135deg, #b91c1c, #ef4444);
-            color: white;
-            border: none;
-            box-shadow: 0 8px 24px rgba(239,68,68,0.25);
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'Space Grotesk', sans-serif;
         }
 
-        .safety-btn.active:hover {
-            box-shadow: 0 14px 36px rgba(239,68,68,0.35);
-            transform: translateY(-2px);
+        .stat-value.crowd-metric { font-size: 18px; }
+
+        .crowd-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
         }
 
-        /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 50;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            background: rgba(10,14,23,0.8);
-            backdrop-filter: blur(8px);
-        }
-        .modal-overlay.visible { display: flex; }
+        .crowd-low { background: rgba(52, 211, 153, 0.15); color: var(--accent-safe); }
+        .crowd-medium { background: rgba(251, 191, 36, 0.15); color: var(--accent-warn); }
+        .crowd-high { background: rgba(251, 146, 60, 0.15); color: var(--accent-danger); }
 
-        .modal-card {
-            background: var(--surface-1);
-            border: 1px solid var(--critical-border);
-            border-radius: var(--radius-xl);
-            padding: 28px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: var(--shadow-lg);
-            animation: modal-in 0.3s var(--ease-out);
+        .detail-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 32px;
         }
 
-        @keyframes modal-in {
-            from { opacity: 0; transform: translateY(12px) scale(0.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .modal-card h3 {
-            font-family: "DM Serif Display", Georgia, serif;
+        .detail-section h3 {
+            font-family: 'Playfair Display', serif;
             font-size: 20px;
-            font-weight: 400;
-            color: var(--critical);
-            margin-bottom: 8px;
-        }
-
-        .modal-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; }
-
-        .safe-zone-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            border-radius: var(--radius-md);
-            background: rgba(52,211,153,0.06);
-            border: 1px solid var(--safe-border);
-            margin-bottom: 8px;
-        }
-
-        .safe-zone-item svg { width: 18px; height: 18px; color: var(--safe); flex-shrink: 0; }
-        .safe-zone-item span { font-weight: 600; font-size: 13px; color: var(--safe); }
-
-        .modal-close-btn {
-            margin-top: 14px;
-            width: 100%;
-            padding: 12px;
-            border-radius: var(--radius-md);
-            border: none;
-            background: var(--surface-3);
+            font-weight: 700;
+            margin-bottom: 16px;
             color: var(--text-primary);
-            font-family: "Outfit", sans-serif;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
         }
 
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        .history-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            padding: 20px;
+            background: rgba(212, 165, 116, 0.05);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
         }
 
-        @media (max-width: 640px) {
-            header h1 { font-size: 22px; }
-            .queue-grid { grid-template-columns: repeat(2, 1fr); }
-            .queue-card .wait-time { font-size: 26px; }
-            #pilgrim-map { height: 280px; }
+        .visit-info { display: flex; flex-direction: column; gap: 16px; }
+
+        .info-item { display: flex; gap: 12px; align-items: flex-start; }
+
+        .info-icon {
+            width: 40px; height: 40px; background: var(--bg-dark);
+            border: 1px solid var(--border-light); border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 18px;
         }
 
-        @media (max-width: 380px) {
-            .queue-grid { grid-template-columns: 1fr; }
+        .info-content h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: var(--text-primary); }
+        .info-content p { font-size: 13px; color: var(--text-secondary); }
+
+        /* ========== CROWD HEATMAP SECTION ========== */
+        .heatmap-section { margin-bottom: 40px; }
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px; font-weight: 700; margin-bottom: 24px; color: var(--text-primary);
+        }
+
+        .heatmap-container {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 24px; margin-bottom: 24px;
+        }
+
+        .heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 4px; margin-bottom: 20px; }
+
+        .heatmap-cell {
+            aspect-ratio: 1; border-radius: 6px; cursor: pointer;
+            transition: all 0.2s ease; border: 1px solid transparent;
+        }
+
+        .heatmap-cell:hover { transform: scale(1.1); border-color: var(--primary); }
+        .heatmap-cell.level-0 { background: rgba(52, 211, 153, 0.15); }
+        .heatmap-cell.level-1 { background: rgba(34, 197, 94, 0.3); }
+        .heatmap-cell.level-2 { background: rgba(251, 191, 36, 0.3); }
+        .heatmap-cell.level-3 { background: rgba(251, 146, 60, 0.4); }
+        .heatmap-cell.level-4 { background: rgba(239, 68, 68, 0.5); }
+
+        .heatmap-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+        /* ========== MAP SECTION ========== */
+        .map-section { margin-bottom: 40px; }
+
+        .map-container {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; overflow: hidden; height: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        #map { width: 100%; height: 100%; filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+
+        /* ========== ZONE CARDS ========== */
+        .zones-section { margin-bottom: 40px; }
+        .zone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+
+        .zone-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 20px; transition: all 0.3s ease; position: relative;
+        }
+        
+        .zone-card::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            border-radius: 12px 12px 0 0;
+            background: transparent;
+        }
+
+        .zone-card:hover { border-color: var(--primary); background: var(--bg-hover); transform: translateY(-4px); }
+
+        .zone-card.safe { border-left: 4px solid var(--accent-safe); }
+        .zone-card.safe::after { background: var(--accent-safe); }
+        .zone-card.crowded { border-left: 4px solid var(--accent-warn); }
+        .zone-card.crowded::after { background: var(--accent-warn); }
+        .zone-card.risk { border-left: 4px solid var(--accent-danger); }
+        .zone-card.risk::after { background: var(--accent-danger); }
+        
+        .zone-card.critical {
+            border-left: 4px solid var(--accent-critical);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .zone-card.critical::after { background: var(--accent-critical); }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        }
+
+        .zone-name { font-weight: 600; font-size: 14px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); }
+        .zone-queue { display: flex; align-items: baseline; gap: 4px; margin-bottom: 12px; }
+        .zone-wait { font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: var(--text-primary); }
+        .zone-unit { font-size: 12px; color: var(--text-muted); }
+
+        .zone-status {
+            display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        .zone-status.safe { background: rgba(52, 211, 153, 0.15); color: var(--accent-safe); }
+        .zone-status.crowded { background: rgba(251, 191, 36, 0.15); color: var(--accent-warn); }
+        .zone-status.risk { background: rgba(251, 146, 60, 0.15); color: var(--accent-danger); }
+        .zone-status.critical { background: rgba(239, 68, 68, 0.15); color: var(--accent-critical); }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .header-content h1 { font-size: 32px; }
+            .detail-title { font-size: 26px; }
+            .detail-content { grid-template-columns: 1fr; }
+            .map-container { height: 350px; }
+            .zone-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+        }
+
+        @media (max-width: 480px) {
+            .header-content h1 { font-size: 24px; }
+            .detail-stats { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
-
 <body>
-    <div class="page-wrapper">
-        <header id="pilgrim-header">
-            <div class="brand-tag">Indra-Netra</div>
-            <h1>Pilgrim Guide</h1>
-            <p class="subtitle">Live queue times & crowd safety map</p>
-            <div class="marquee-wrap">
-                <span id="alert-marquee" class="marquee-text">
-                    Initializing... Please wait for real-time updates.
-                </span>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="header-tag">Indra-Netra</div>
+                <h1>Pilgrimage Guide</h1>
+                <p>Live crowd tracking, zone safety data & pilgrimage insights</p>
+                <div id="system-status" style="color: var(--accent-safe)">Initializing Live Status...</div>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <main>
-            <!-- Queue Status Cards -->
-            <p class="section-label">Queue Wait Times</p>
-            <div id="status-container" class="queue-grid"></div>
+    <main class="container">
+        <!-- SEARCH SECTION -->
+        <section class="search-section">
+            <div class="search-wrapper">
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        class="search-input" 
+                        placeholder="Search temples, shrines, pilgrimage sites..."
+                        autocomplete="off"
+                    />
+                    <button class="search-btn" id="search-btn">Search</button>
+                </div>
+                <div class="search-suggestions" id="suggestions"></div>
+            </div>
+        </section>
 
-            <!-- Embedded Live Map -->
-            <p class="section-label">Live Crowd Map</p>
-            <div class="map-embed">
-                <div id="pilgrim-map"></div>
-                <div class="map-legend">
-                    <span class="legend-dot l-safe">Low crowd</span>
-                    <span class="legend-dot l-med">Medium</span>
-                    <span class="legend-dot l-high">High</span>
-                    <span class="legend-dot l-block">Blocked</span>
+        <!-- LOCATION DETAIL -->
+        <section id="location-detail" class="location-detail">
+            <div class="detail-card">
+                <div class="detail-header">
+                    <h2 class="detail-title" id="detail-name">Location Name</h2>
+                    <span class="detail-category" id="detail-type">Location Type</span>
+                </div>
+
+                <div class="detail-stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Usual Crowd</div>
+                        <div class="stat-value crowd-metric" id="detail-crowd">--</div>
+                        <div class="crowd-badge crowd-medium">Trends Validated</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Visit Duration</div>
+                        <div class="stat-value" id="detail-visit">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Daily Footfall</div>
+                        <div class="stat-value" id="detail-footfall">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Best Time to Visit</div>
+                        <div class="stat-value" id="detail-best">--</div>
+                    </div>
+                </div>
+
+                <div class="detail-content">
+                    <div class="detail-section">
+                        <h3>📜 Historical Significance</h3>
+                        <div class="history-text" id="detail-history">
+                            --
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>🎯 Visit Tips</h3>
+                        <div class="visit-info" id="visit-tips">
+                            --
+                        </div>
+                    </div>
                 </div>
             </div>
+        </section>
 
-            <!-- Safety Action -->
-            <div class="safety-action">
-                <button id="pilgrim-button" class="safety-btn" disabled>
-                    ⚠ See Safer Areas
-                </button>
+        <!-- CROWD HEATMAP -->
+        <section class="heatmap-section" id="heatmap-section" style="display: none;">
+            <h2 class="section-title">Crowd Patterns (24-Hour)</h2>
+            <div class="heatmap-container">
+                <div class="heatmap" id="heatmap"></div>
+                <div class="heatmap-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: rgba(52, 211, 153, 0.15);"></div>
+                        <span>Very Low</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: rgba(34, 197, 94, 0.3);"></div>
+                        <span>Low</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: rgba(251, 191, 36, 0.3);"></div>
+                        <span>Moderate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: rgba(251, 146, 60, 0.4);"></div>
+                        <span>High</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: rgba(239, 68, 68, 0.5);"></div>
+                        <span>Critical</span>
+                    </div>
+                </div>
             </div>
-        </main>
-    </div>
+        </section>
 
-    <!-- Safety Modal -->
-    <div id="modal" class="modal-overlay">
-        <div class="modal-card">
-            <h3>⚠ High Crowd Alert</h3>
-            <p class="modal-desc">Consider moving towards these safer areas:</p>
-            <div id="safe-zones-list"></div>
-            <button id="close-modal" class="modal-close-btn">Close</button>
-        </div>
-    </div>
+        <!-- LIVE ZONES (Always Real-Time) -->
+        <section class="zones-section" id="zones-section" style="display: block;">
+            <h2 class="section-title">Live Zone Status</h2>
+            <div class="zone-grid" id="zones-grid">
+                <!-- Zones rendered here by JS -->
+                <div style="color:var(--text-muted);font-size:14px;padding:20px;">Fetching Live Area Data...</div>
+            </div>
+        </section>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+        <!-- MAP (Always Real-Time) -->
+        <section class="map-section" id="map-section" style="display: block;">
+            <h2 class="section-title">Pilgrimage Route Map (Live)</h2>
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const alertMarquee = document.getElementById('alert-marquee');
-        const pilgrimButton = document.getElementById('pilgrim-button');
-        const modal = document.getElementById('modal');
-        const closeModalBtn = document.getElementById('close-modal');
-        const statusContainer = document.getElementById('status-container');
-        const safeZonesList = document.getElementById('safe-zones-list');
+        // ============= STATIC LOCATION DATABASE =============
+        const locationDatabase = {
+            'meenakshi': {
+                id: 'meenakshi',
+                name: 'Meenakshi Temple',
+                type: 'Temple',
+                crowd: 'Moderate',
+                visitTime: '45-60 mins',
+                footfall: '12,500+',
+                bestTime: '5-7 AM',
+                history: 'The Meenakshi Temple is one of the oldest functioning temples in South India, with origins dating back over 1,500 years. Built in the Dravidian architectural style, this magnificent structure is dedicated to Goddess Meenakshi and Lord Sundareswarar. Its ornate gopurams (temple towers) and intricate carvings depict scenes from Hindu mythology, attracting devotees and architecture enthusiasts worldwide.',
+                coords: [9.9252, 78.1198],
+                heatmap: [1, 1, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4, 3, 2, 2, 3, 4, 4, 3, 2, 1, 1, 0, 0]
+            },
+            'tirupati': {
+                id: 'tirupati',
+                name: 'Sri Venkateswara Temple',
+                type: 'Temple',
+                crowd: 'Very Crowded',
+                visitTime: '2-3 hours',
+                footfall: '50,000+',
+                bestTime: '4-6 AM',
+                history: 'Perched at 2,160 meters on the sacred Tirumala Hills, the Sri Venkateswara Temple is one of the most visited temples in the world. Believed to be built in the 10th century, it houses the deity Lord Venkateswara. The temple complex is renowned for its spiritual significance and intricate golden ornaments adorning the main sanctum.',
+                coords: [13.1812, 79.1450],
+                heatmap: [2, 1, 0, 0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 2, 1, 1]
+            },
+            'kashi': {
+                id: 'kashi',
+                name: 'Kashi Vishwanath Temple',
+                type: 'Temple',
+                crowd: 'High',
+                visitTime: '30-45 mins',
+                footfall: '8,000+',
+                bestTime: '6-8 AM',
+                history: 'Located on the banks of the sacred Ganga River in Varanasi, Kashi Vishwanath is one of the 12 Jyotirlingas. This ancient temple has been a center of spiritual pilgrimage for over 2,000 years. The temple\'s ornate spire, covered in gold, is a symbol of Hindu devotion and belief in the eternal nature of existence.',
+                coords: [25.3216, 83.0087],
+                heatmap: [1, 0, 0, 1, 2, 3, 3, 3, 3, 3, 2, 2, 2, 3, 3, 3, 3, 2, 1, 1, 1, 0, 0, 0]
+            },
+            'khajuraho': {
+                id: 'khajuraho',
+                name: 'Khajuraho Temples',
+                type: 'Temple Complex',
+                crowd: 'Low',
+                visitTime: '2-3 hours',
+                footfall: '3,500+',
+                bestTime: '6-9 AM',
+                history: 'The Khajuraho Temples are a group of Hindu and Jain temples built between the 10th and 11th centuries during the Chandella dynasty. Famous for their intricate stone carvings depicting celestial nymphs, musicians, and erotic sculptures, these temples showcase the artistic and architectural brilliance of medieval India.',
+                coords: [24.8316, 79.9864],
+                heatmap: [0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+            },
+            'vaishno devi': {
+                id: 'vaishno-devi',
+                name: 'Vaishno Devi Shrine',
+                type: 'Holy Cave Shrine',
+                crowd: 'Very Crowded',
+                visitTime: '4-6 hours',
+                footfall: '25,000+',
+                bestTime: '5-7 AM',
+                history: 'Nestled in a cave at 5,200 feet above sea level in the Trikuta Mountains, the Vaishno Devi Shrine is dedicated to the divine mother Goddess Vaishno Devi. Believed to be over 700 years old, pilgrims undertake a 13km trek to reach this sacred sanctuary, making it one of the most visited pilgrimage sites in India.',
+                coords: [32.8654, 75.2934],
+                heatmap: [2, 1, 1, 2, 2, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 4, 4, 4, 3, 2, 1, 1, 1, 1]
+            }
+        };
 
-        let latestStatusData = {};
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const suggestions = document.getElementById('suggestions');
+        const locationDetail = document.getElementById('location-detail');
+        const heatmapSection = document.getElementById('heatmap-section');
 
+        function showSuggestions(query) {
+            if (!query.trim()) {
+                suggestions.classList.remove('active');
+                return;
+            }
+
+            const filtered = Object.values(locationDatabase).filter(loc => 
+                loc.name.toLowerCase().includes(query.toLowerCase()) ||
+                loc.type.toLowerCase().includes(query.toLowerCase())
+            );
+
+            suggestions.innerHTML = filtered.map(loc => `
+                <div class="suggestion-item" onclick="selectLocation('${loc.id}')">
+                    <div class="suggestion-name">${loc.name}</div>
+                    <div class="suggestion-meta">${loc.type} • ${loc.footfall} daily visitors</div>
+                </div>
+            `).join('');
+
+            suggestions.classList.add('active');
+        }
+
+        function selectLocation(id) {
+            const location = locationDatabase[id];
+            displayLocationDetail(location);
+            suggestions.classList.remove('active');
+            searchInput.value = location.name;
+            locationDetail.classList.add('active');
+            renderHeatmap(location.heatmap);
+            heatmapSection.style.display = 'block';
+            
+            // Pan map to new location but keep real-time features active
+            if (map) map.setView(location.coords, 14);
+            
+            window.scrollTo({ top: locationDetail.offsetTop - 100, behavior: 'smooth' });
+        }
+
+        function displayLocationDetail(location) {
+            document.getElementById('detail-name').textContent = location.name;
+            document.getElementById('detail-type').textContent = location.type;
+            document.getElementById('detail-crowd').textContent = location.crowd;
+            document.getElementById('detail-visit').textContent = location.visitTime;
+            document.getElementById('detail-footfall').textContent = location.footfall;
+            document.getElementById('detail-best').textContent = location.bestTime;
+            document.getElementById('detail-history').textContent = location.history;
+
+            const tips = {
+                'meenakshi': [
+                    { icon: '🕐', title: 'Optimal Hours', text: 'Visit early morning (5-7 AM) for minimal crowds' },
+                    { icon: '📍', title: 'Darshan Queue', text: 'Usually shortest on weekdays before 8 AM' }
+                ],
+                'tirupati': [
+                    { icon: '🥾', title: 'Trek Difficulty', text: 'Moderate; wear comfortable shoes for the 13km journey' },
+                    { icon: '⏰', title: 'Best Season', text: 'October-February for pleasant weather' }
+                ],
+                'kashi': [
+                    { icon: '🚣', title: 'Ghat Visit', text: 'Combine temple visit with evening Ganga Aarti at 6:15 PM' },
+                    { icon: '🛕', title: 'Narrow Lanes', text: 'Prepare for narrow galis; avoid peak monsoon' }
+                ],
+                'khajuraho': [
+                    { icon: '📸', title: 'Photography', text: 'Best light for photos during sunrise and sunset' },
+                    { icon: '🗺️', title: 'Night Shows', text: 'Light & sound shows available in evening (6:30 PM)' }
+                ],
+                'vaishno-devi': [
+                    { icon: '🥾', title: 'Trek Details', text: '13km trek takes 4-6 hours; carry water and snacks' },
+                    { icon: '📋', title: 'Registration', text: 'Register at the base camp; receive Bhawan slip' }
+                ]
+            };
+
+            const locationTips = tips[location.id] || tips['meenakshi'];
+            document.getElementById('visit-tips').innerHTML = locationTips.map(tip => `
+                <div class="info-item">
+                    <div class="info-icon">${tip.icon}</div>
+                    <div class="info-content">
+                        <h4>${tip.title}</h4>
+                        <p>${tip.text}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderHeatmap(data) {
+            const heatmap = document.getElementById('heatmap');
+            heatmap.innerHTML = data.map((level, hour) => `
+                <div class="heatmap-cell level-${level}" title="${hour}:00 - Level ${level}"></div>
+            `).join('');
+        }
+
+        searchInput.addEventListener('input', (e) => showSuggestions(e.target.value));
+        searchBtn.addEventListener('click', () => {
+            const query = searchInput.value.toLowerCase();
+            for (let key in locationDatabase) {
+                if (locationDatabase[key].name.toLowerCase().includes(query)) {
+                    selectLocation(key);
+                    break;
+                }
+            }
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchBtn.click();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target !== searchInput && e.target !== suggestions) {
+                suggestions.classList.remove('active');
+            }
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value === '') {
+                showSuggestions('');
+                suggestions.innerHTML = Object.values(locationDatabase).map(loc => `
+                    <div class="suggestion-item" onclick="selectLocation('${loc.id}')">
+                        <div class="suggestion-name">${loc.name}</div>
+                        <div class="suggestion-meta">${loc.type} • ${loc.footfall} daily</div>
+                    </div>
+                `).join('');
+                suggestions.classList.add('active');
+            }
+        });
+
+
+        // ============================
+        // REAL-TIME DATA SYNC
+        // ============================
         const cameraNames = {
-            'temple_darshan_zone1': 'Darshan',
-            'temple_queue_cam1': 'Queue 1',
-            'temple_queue_cam2': 'Queue 2',
+            'temple_darshan_zone1': 'Darshan Zone',
+            'temple_queue_cam1': 'Queue Zone 1',
+            'temple_queue_cam2': 'Queue Zone 2',
             'temple_outer_queue1': 'Outer Queue',
             'temple_flow_gate2': 'Gate Flow'
         };
-
-        // ============================
-        // QUEUE CARDS
-        // ============================
-        for (const cameraId in cameraNames) {
-            statusContainer.insertAdjacentHTML('beforeend', `
-                <div id="status-box-${cameraId}" class="queue-card">
-                    <div class="queue-name">${cameraNames[cameraId]}</div>
-                    <div class="wait-time" id="wait-${cameraId}">—</div>
-                    <div class="wait-unit">min wait</div>
-                    <div class="status-badge" id="badge-${cameraId}">Loading</div>
-                </div>
-            `);
+        const riskPriority = { 'Stampede in Progress': 4, 'High Risk of Stampede': 3, 'Crowded': 2, 'Safe': 1 };
+        
+        async function fetchAndUpdateData() {
+            try {
+                const r = await fetch('/api/public_status');
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const liveData = await r.json();
+                
+                const entries = Object.keys(cameraNames).map(cid => ({
+                    id: cid,
+                    status: liveData[cid] || { situation: 'Initializing...', person_count: 0 }
+                })).sort((a, b) => (riskPriority[b.status.situation] || 0) - (riskPriority[a.status.situation] || 0));
+                
+                const grid = document.getElementById('zones-grid');
+                grid.innerHTML = entries.map(entry => {
+                    const personCount = entry.status.person_count !== undefined ? entry.status.person_count : 0;
+                    const waitMins = Math.max(0, Math.floor(personCount / 20));
+                    
+                    let statusClass = 'safe';
+                    let statusText = 'SAFE';
+                    
+                    switch (entry.status.situation) {
+                        case 'Stampede in Progress':
+                            statusClass = 'critical'; statusText = 'STAMPEDE'; break;
+                        case 'High Risk of Stampede':
+                            statusClass = 'risk'; statusText = 'HIGH RISK'; break;
+                        case 'Crowded':
+                            statusClass = 'crowded'; statusText = 'CROWDED'; break;
+                        default:
+                            statusClass = 'safe'; statusText = 'SAFE'; break;
+                    }
+                    
+                    return `
+                        <div class="zone-card ${statusClass}">
+                            <div class="zone-name">${cameraNames[entry.id]}</div>
+                            <div class="zone-queue">
+                                <div class="zone-wait">${waitMins}</div>
+                                <div class="zone-unit">min wait</div>
+                            </div>
+                            <span class="zone-status ${statusClass}">${statusText}</span>
+                        </div>
+                    `;
+                }).join('');
+                
+                const anyHighRisk = entries.some(e => e.status.situation === 'Stampede in Progress' || e.status.situation === 'High Risk of Stampede');
+                const sysStatus = document.getElementById('system-status');
+                if (anyHighRisk) {
+                    sysStatus.textContent = '⚠ HIGH RISK / STAMPEDE ALERT ⚠';
+                    sysStatus.style.color = 'var(--accent-critical)';
+                } else {
+                    sysStatus.textContent = 'System running normally.';
+                    sysStatus.style.color = 'var(--accent-safe)';
+                }
+                
+            } catch (e) { console.error('Status error:', e); }
         }
 
         // ============================
-        // EMBEDDED LEAFLET MAP
+        // MAP FUNCTIONALITY (Real-time Integration)
         // ============================
-        const pilgrimMap = L.map('pilgrim-map', {
-            zoomControl: false,
-            attributionControl: false
-        }).setView([12.9718, 77.5949], 17);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 20
-        }).addTo(pilgrimMap);
-
+        let map = null;
         const mapGateMarkers = {};
         const mapAreaLayers = {};
         const mapRouteLayers = {};
 
         function levelToColor(level) {
             switch (level) {
-                case 'low': return '#34d399';
-                case 'medium': return '#fbbf24';
-                case 'high': return '#fb923c';
-                case 'blocked': return '#ef4444';
-                default: return '#64748b';
+                case 'low': return 'rgba(52, 211, 153, 0.8)';
+                case 'medium': return 'rgba(251, 191, 36, 0.8)';
+                case 'high': return 'rgba(251, 146, 60, 0.8)';
+                case 'blocked': return 'rgba(239, 68, 68, 0.8)';
+                default: return 'rgba(156, 163, 175, 0.8)';
             }
         }
 
+        function initMap() {
+            if (!map) {
+                map = L.map('map').setView([12.9718, 77.5949], 17);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 20
+                }).addTo(map);
+                
+                pollMapData();
+                setInterval(pollMapData, 3000);
+            }
+        }
+        
         function renderMapData(payload) {
+            if (!map) return;
             const { gates, areas, routes } = payload;
 
-            // Update map center if we have it
-            if (payload.center) {
-                // Don't auto-pan — only set on first load
-                if (!pilgrimMap._initialSet) {
-                    pilgrimMap.setView(payload.center, payload.zoom || 17);
-                    pilgrimMap._initialSet = true;
-                }
+            if (payload.center && !map._initialSetFromBackend) {
+                map.setView(payload.center, payload.zoom || 17);
+                map._initialSetFromBackend = true;
             }
 
-            gates.forEach(gate => {
+            if (gates) gates.forEach(gate => {
                 const color = levelToColor(gate.level);
-                const html = `<div style="padding:4px 8px;border-radius:6px;background:rgba(17,24,39,0.9);border:1px solid rgba(148,163,184,0.2);font-family:'Outfit',sans-serif;">
-                    <div style="font-size:10px;font-weight:600;color:#f1f5f9;">${gate.name}</div>
+                const html = `<div style="padding:4px 8px;border-radius:6px;background:rgba(26, 31, 42, 0.9);border:1px solid ${color};font-family:'Inter',sans-serif;">
+                    <div style="font-size:10px;font-weight:600;color:var(--text-primary);">${gate.name}</div>
                     <div style="font-size:9px;color:${color};font-weight:600;margin-top:1px;">${gate.situation}</div>
                 </div>`;
                 if (!mapGateMarkers[gate.id]) {
                     mapGateMarkers[gate.id] = L.marker([gate.lat, gate.lng], {
                         icon: L.divIcon({ className: '', html, iconSize: [160, 36], iconAnchor: [80, 18] })
-                    }).addTo(pilgrimMap);
+                    }).addTo(map);
                 } else {
                     mapGateMarkers[gate.id].setIcon(L.divIcon({ className: '', html, iconSize: [160, 36], iconAnchor: [80, 18] }));
                 }
             });
 
-            areas.forEach(area => {
+            if (areas) areas.forEach(area => {
                 const color = levelToColor(area.level);
                 if (!mapAreaLayers[area.id]) {
                     mapAreaLayers[area.id] = L.circle([area.lat, area.lng], {
                         radius: area.radius_m, color, fillColor: color, fillOpacity: 0.4, weight: 2
-                    }).addTo(pilgrimMap).bindPopup(`${area.name}<br><small>${area.situation}</small>`);
+                    }).addTo(map).bindPopup(`${area.name}<br><small>${area.situation}</small>`);
                 } else {
                     mapAreaLayers[area.id].setStyle({ color, fillColor: color });
                     mapAreaLayers[area.id].setPopupContent(`${area.name}<br><small>${area.situation}</small>`);
                 }
             });
 
-            routes.forEach(route => {
+            if (routes) routes.forEach(route => {
                 const color = levelToColor(route.level);
                 if (!mapRouteLayers[route.id]) {
                     mapRouteLayers[route.id] = L.polyline(route.points, {
                         color, weight: 6, opacity: 0.8
-                    }).addTo(pilgrimMap).bindPopup(`${route.name}<br><small>${route.situation}</small>`);
+                    }).addTo(map).bindPopup(`${route.name}<br><small>${route.situation}</small>`);
                 } else {
                     mapRouteLayers[route.id].setStyle({ color });
                     mapRouteLayers[route.id].setPopupContent(`${route.name}<br><small>${route.situation}</small>`);
@@ -541,106 +905,12 @@
             } catch (e) { console.error('Map poll error', e); }
         }
 
-        pollMapData();
-        setInterval(pollMapData, 3000);
-
-        // ============================
-        // STATUS POLLING + AUTO-SORT
-        // ============================
-        const fetchAndUpdateData = async () => {
-            try {
-                const r = await fetch('/api/public_status');
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-                const liveData = await r.json();
-                latestStatusData = liveData;
-                updateDashboard(liveData);
-            } catch (e) { console.error('Status error:', e); }
-        };
-
-        const riskPriority = { 'Stampede in Progress': 4, 'High Risk of Stampede': 3, 'Crowded': 2, 'Safe': 1 };
-
-        const updateDashboard = (liveData) => {
-            let marqueeParts = [];
-            let anyHighRisk = false;
-
-            // Build sorted entries
-            const entries = Object.keys(cameraNames).map(cid => ({
-                id: cid,
-                status: liveData[cid] || { situation: 'Initializing...', person_count: 0 }
-            })).sort((a, b) => (riskPriority[b.status.situation] || 0) - (riskPriority[a.status.situation] || 0));
-
-            // Reorder DOM cards
-            entries.forEach(entry => {
-                const card = document.getElementById(`status-box-${entry.id}`);
-                if (card) statusContainer.appendChild(card);
-            });
-
-            for (const { id, status } of entries) {
-                const waitEl = document.getElementById(`wait-${id}`);
-                const badgeEl = document.getElementById(`badge-${id}`);
-                const card = document.getElementById(`status-box-${id}`);
-                const personCount = status.person_count || 0;
-                const waitMins = Math.max(0, Math.floor(personCount / 20));
-
-                let levelClass = 'level-safe', badgeText = '✓ Safe';
-
-                switch (status.situation) {
-                    case 'Stampede in Progress':
-                        levelClass = 'level-stampede'; badgeText = '⚠ STAMPEDE'; anyHighRisk = true; break;
-                    case 'High Risk of Stampede':
-                        levelClass = 'level-risk'; badgeText = '⚡ High Risk'; anyHighRisk = true; break;
-                    case 'Crowded':
-                        levelClass = 'level-crowded'; badgeText = '🔶 Crowded'; break;
-                    default:
-                        levelClass = 'level-safe'; badgeText = '✓ Safe'; break;
-                }
-
-                if (card) card.className = `queue-card ${levelClass}`;
-                if (waitEl) waitEl.textContent = waitMins;
-                if (badgeEl) badgeEl.textContent = badgeText;
-
-                marqueeParts.push(`${cameraNames[id]}: ${status.situation}`);
-            }
-
-            alertMarquee.textContent = marqueeParts.join('  ·  ') || 'System running normally.';
-
-            if (anyHighRisk) {
-                pilgrimButton.disabled = false;
-                pilgrimButton.className = 'safety-btn active';
-            } else {
-                pilgrimButton.disabled = true;
-                pilgrimButton.className = 'safety-btn';
-            }
-        };
-
-        fetchAndUpdateData();
-        setInterval(fetchAndUpdateData, 3000);
-
-        // ============================
-        // SAFETY MODAL
-        // ============================
-        pilgrimButton.addEventListener('click', () => {
-            if (pilgrimButton.disabled) return;
-            safeZonesList.innerHTML = '';
-            let found = false;
-            for (const cid in latestStatusData) {
-                if (latestStatusData[cid]?.situation === 'Safe') {
-                    found = true;
-                    safeZonesList.insertAdjacentHTML('beforeend', `
-                        <div class="safe-zone-item">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>${cameraNames[cid] || cid}</span>
-                        </div>
-                    `);
-                }
-            }
-            if (!found) safeZonesList.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:13px;padding:12px;">No safe areas currently. Follow authority instructions.</p>';
-            modal.classList.add('visible');
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndUpdateData();
+            setInterval(fetchAndUpdateData, 3000);
+            initMap();
         });
 
-        closeModalBtn.addEventListener('click', () => modal.classList.remove('visible'));
-        modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
-    });
     </script>
 </body>
 </html>

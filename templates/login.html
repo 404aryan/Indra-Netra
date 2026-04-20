@@ -4,204 +4,399 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indra-Netra — Access Portal</title>
-    <meta name="description" content="Access the Indra-Netra crowd safety monitoring system. Authority dashboard, pilgrim view, and live crowd maps.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
 
         :root {
-            --surface-0: #0a0e17;
-            --surface-1: #111827;
-            --surface-2: #1a2233;
-            --surface-3: #232d3f;
-            --accent: #e8a830;
-            --accent-dim: #b8841e;
-            --accent-soft: #f6d06b;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --text-inverse: #0a0e17;
-            --border: rgba(148, 163, 184, 0.12);
-            --safe: #34d399;
-            --danger: #f87171;
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-            --radius-full: 999px;
-            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --primary: #d4a574;
+            --primary-dark: #8b6f47;
+            --primary-light: #e8d4c4;
+            --accent-gold: #ffd700;
+            --accent-cyan: #00d9ff;
+            --accent-rose: #ff4d6d;
+            --bg-dark: #0f1419;
+            --bg-darker: #0a0d12;
+            --bg-card: #1a1f2a;
+            --bg-hover: #242a38;
+            --text-primary: #f5f1ed;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --border-color: rgba(212, 165, 116, 0.15);
+            --border-light: rgba(212, 165, 116, 0.08);
+        }
+
+        html {
+            scroll-behavior: smooth;
         }
 
         body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: "Outfit", system-ui, sans-serif;
-            color: var(--text-primary);
-            background:
-                radial-gradient(ellipse at 15% 20%, rgba(232, 168, 48, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at 85% 80%, rgba(52, 211, 153, 0.05) 0%, transparent 50%),
-                var(--surface-0);
-            -webkit-font-smoothing: antialiased;
+            perspective: 1000px;
+            overflow-x: hidden;
         }
 
-        /* Subtle grain */
-        body::before {
-            content: "";
+        /* PARTICLE BACKGROUND */
+        .particles {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 0;
             pointer-events: none;
-            opacity: 0.025;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            background-repeat: repeat;
-            background-size: 256px;
         }
 
-        /* Background image layer */
-        .bg-layer {
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 50%;
+            opacity: 0;
+            animation: float-particle 20s infinite;
+        }
+
+        @keyframes float-particle {
+            0% {
+                opacity: 0;
+                transform: translateY(0) translateX(0);
+            }
+            10% {
+                opacity: 0.6;
+            }
+            90% {
+                opacity: 0.6;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100vh) translateX(100px);
+            }
+        }
+
+        /* STARFIELD BACKGROUND */
+        .starfield {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 0;
-            background: url("{{ url_for('static', filename='temple.jpg') }}") center/cover no-repeat;
-            opacity: 0.07;
-            filter: saturate(0.3);
         }
 
+        .star {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        .star.twinkling {
+            animation: twinkle 3s infinite;
+        }
+
+        .star.broken {
+            animation: break-star 2s ease-in-out;
+            opacity: 0.8;
+        }
+
+        @keyframes twinkle {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        @keyframes break-star {
+            0% {
+                opacity: 0.8;
+                transform: scale(1) rotate(0deg);
+                filter: drop-shadow(0 0 10px var(--accent-gold));
+            }
+            50% {
+                opacity: 0.6;
+                filter: drop-shadow(0 0 20px var(--accent-gold));
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3) rotate(180deg) translateY(100px);
+                filter: drop-shadow(0 0 0px var(--accent-gold));
+            }
+        }
+
+        /* CONTAINER */
         .container {
             position: relative;
-            z-index: 1;
-            background:
-                radial-gradient(ellipse at top left, rgba(232, 168, 48, 0.05), transparent 50%),
-                var(--surface-1);
-            padding: 36px 32px 32px;
-            border-radius: var(--radius-xl);
-            max-width: 460px;
-            width: 92%;
-            box-shadow:
-                0 40px 100px rgba(0, 0, 0, 0.6),
-                0 0 60px rgba(232, 168, 48, 0.04);
-            border: 1px solid rgba(148, 163, 184, 0.15);
-            text-align: left;
-            animation: card-in 0.5s var(--ease-out);
+            z-index: 10;
+            width: 100%;
+            max-width: 480px;
+            padding: 0 20px;
         }
 
-        @keyframes card-in {
+        /* MAIN CARD */
+        .card {
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(212, 165, 116, 0.03) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 48px 40px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 40px rgba(212, 165, 116, 0.1),
+                inset 0 1px 0 rgba(212, 165, 116, 0.1);
+            backdrop-filter: blur(10px);
+            animation: card-slide-up 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+        }
+
+        @keyframes card-slide-up {
             from {
                 opacity: 0;
-                transform: translateY(16px) scale(0.97);
+                transform: translateY(40px) rotateX(10deg);
             }
             to {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0) rotateX(0deg);
             }
         }
 
-        /* Decorative glow */
-        .container::before {
-            content: "";
-            position: absolute;
-            top: -80px;
-            left: -40px;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, rgba(232, 168, 48, 0.08), transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
+        /* HEADER */
+        .header {
+            margin-bottom: 32px;
+            text-align: center;
         }
 
         .brand-tag {
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.25em;
-            color: var(--accent);
-            font-weight: 600;
-            margin-bottom: 6px;
+            letter-spacing: 2px;
+            color: var(--accent-gold);
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: block;
+            animation: fade-in-down 0.6s ease 0.1s both;
         }
 
         h1 {
-            font-family: "DM Serif Display", Georgia, serif;
-            font-size: 28px;
-            font-weight: 400;
-            margin-bottom: 4px;
-            letter-spacing: -0.01em;
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fade-in-down 0.6s ease 0.2s both;
+            letter-spacing: -1px;
         }
 
-        #welcome-text {
-            font-size: 13px;
+        .subtitle {
+            font-size: 14px;
             color: var(--text-secondary);
+            font-weight: 300;
+            animation: fade-in-down 0.6s ease 0.3s both;
+        }
+
+        @keyframes fade-in-down {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* BUTTON GROUP */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             margin-bottom: 24px;
         }
 
         .access-btn {
             display: flex;
             align-items: center;
-            justify-content: flex-start;
-            width: 100%;
-            padding: 16px;
-            margin-bottom: 10px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            background: var(--surface-2);
+            gap: 16px;
+            padding: 18px 20px;
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.08) 0%, rgba(0, 217, 255, 0.04) 100%);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
             color: var(--text-primary);
             cursor: pointer;
-            font-family: "Outfit", sans-serif;
-            font-size: 13px;
-            gap: 14px;
-            transition: all 0.2s var(--ease-out);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
             text-decoration: none;
+            animation: fade-in-up 0.6s ease both;
+        }
+
+        .access-btn:nth-child(1) { animation-delay: 0.4s; }
+        .access-btn:nth-child(2) { animation-delay: 0.5s; }
+        .access-btn:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .access-btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+            z-index: -1;
         }
 
         .access-btn:hover {
-            border-color: rgba(232, 168, 48, 0.35);
-            background: var(--surface-3);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(232, 168, 48, 0.05);
-            transform: translateY(-1px);
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.15) 0%, rgba(0, 217, 255, 0.08) 100%);
+            box-shadow: 
+                0 8px 25px rgba(212, 165, 116, 0.15),
+                0 0 30px rgba(212, 165, 116, 0.1),
+                inset 0 1px 0 rgba(212, 165, 116, 0.2);
+            transform: translateY(-4px);
         }
 
-        .access-btn .icon {
-            font-size: 1.4em;
-            width: 40px;
-            height: 40px;
+        .access-btn:hover::before {
+            left: 100%;
+        }
+
+        .icon {
+            font-size: 24px;
+            width: 48px;
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: var(--radius-sm);
-            background: rgba(232, 168, 48, 0.08);
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.2), rgba(0, 217, 255, 0.1));
+            border-radius: 10px;
             flex-shrink: 0;
+            transition: all 0.3s ease;
         }
 
-        .title {
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text-primary);
+        .access-btn:hover .icon {
+            background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+            transform: scale(1.1) rotate(5deg);
         }
 
-        .subtitle {
-            font-size: 11px;
-            color: var(--text-muted);
+        .btn-text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .btn-title {
+            font-weight: 700;
             display: block;
-            margin-top: 3px;
+            margin-bottom: 3px;
+            color: var(--primary);
+        }
+
+        .btn-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* DIVIDER */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: 28px 0;
+        }
+
+        /* FORM SECTIONS */
+        .form-section {
+            display: none;
+            animation: fade-in 0.4s ease;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .back-btn:hover {
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+
+        .form-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .form-input {
             width: 100%;
-            padding: 12px 14px;
-            margin-bottom: 10px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            background: var(--surface-2);
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            background: rgba(212, 165, 116, 0.05);
+            border: 1.5px solid var(--border-light);
+            border-radius: 10px;
             color: var(--text-primary);
-            font-family: "Outfit", sans-serif;
+            font-family: 'Outfit', sans-serif;
             font-size: 14px;
-            transition: border-color 0.2s ease;
+            transition: all 0.3s ease;
+            outline: none;
         }
 
         .form-input::placeholder {
@@ -209,232 +404,507 @@
         }
 
         .form-input:focus {
-            outline: none;
-            border-color: rgba(232, 168, 48, 0.5);
-            box-shadow: 0 0 0 2px rgba(232, 168, 48, 0.1);
+            border-color: var(--primary);
+            background: rgba(212, 165, 116, 0.1);
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.15);
         }
 
-        .btn-login {
-            padding: 13px;
+        .form-input:focus::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-submit {
             width: 100%;
-            background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent-gold) 100%);
             border: none;
-            color: var(--text-inverse);
-            font-family: "Outfit", sans-serif;
-            font-weight: 600;
-            border-radius: var(--radius-full);
-            cursor: pointer;
+            border-radius: 10px;
+            color: var(--bg-darker);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
             font-size: 14px;
-            box-shadow: 0 12px 30px rgba(232, 168, 48, 0.25);
-            transition: all 0.2s ease;
-            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 8px 20px rgba(212, 165, 116, 0.3);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
-        .btn-login:hover {
-            box-shadow: 0 16px 40px rgba(232, 168, 48, 0.35);
-            transform: translateY(-1px);
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(212, 165, 116, 0.4);
         }
 
-        .login-form, .register-form {
-            display: none;
-            text-align: left;
-            margin-top: 16px;
-        }
-
-        .login-form h3, .register-form h3, #add-camera-form h3 {
-            font-family: "DM Serif Display", Georgia, serif;
-            font-weight: 400;
-            font-size: 20px;
-            margin-bottom: 16px;
-            color: var(--text-primary);
+        .btn-submit:active {
+            transform: translateY(0);
         }
 
         .error-message {
-            color: var(--danger);
+            color: var(--accent-rose);
+            font-size: 12px;
             margin-top: 8px;
-            font-size: 12px;
-            padding: 8px 12px;
-            border-radius: var(--radius-sm);
-            background: rgba(248, 113, 113, 0.08);
-            border: 1px solid rgba(248, 113, 113, 0.2);
+            padding: 10px 14px;
+            background: rgba(255, 77, 109, 0.1);
+            border: 1px solid rgba(255, 77, 109, 0.2);
+            border-radius: 8px;
+            display: none;
         }
 
-        .divider {
-            height: 1px;
-            background: var(--border);
-            margin: 16px 0;
+        .error-message.show {
+            display: block;
+            animation: shake 0.4s ease;
         }
 
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: var(--text-muted);
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-family: "Outfit", sans-serif;
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* FLOATING LABEL */
+        .floating-label {
+            position: relative;
             margin-bottom: 12px;
-            transition: color 0.2s ease;
         }
 
-        .back-link:hover {
-            color: var(--accent);
+        .floating-label input, .floating-label select {
+            width: 100%;
         }
 
+        label {
+            position: absolute;
+            top: 14px;
+            left: 16px;
+            font-size: 14px;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .floating-label input:focus ~ label,
+        .floating-label input:not(:placeholder-shown) ~ label,
+        .floating-label select:focus ~ label,
+        .floating-label select:valid ~ label {
+            top: -8px;
+            left: 14px;
+            font-size: 12px;
+            background: var(--bg-card);
+            padding: 0 4px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 3D FLIP ANIMATION */
+        .flip-card {
+            perspective: 1000px;
+            height: 300px;
+            position: relative;
+        }
+
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .flip-card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 640px) {
+            .card {
+                padding: 32px 24px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            .form-title {
+                font-size: 24px;
+            }
+
+            .access-btn {
+                padding: 16px 16px;
+                gap: 12px;
+            }
+
+            .icon {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
+
+        /* ACCESSIBILITY */
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
+            *,
+            *::before,
+            *::after {
                 animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
             }
         }
     </style>
 </head>
-
 <body>
-    <div class="bg-layer"></div>
+    <!-- STARFIELD -->
+    <canvas id="starfield" style="position: fixed; top: 0; left: 0; z-index: 1; width: 100%; height: 100%;"></canvas>
 
-    <div class="container" id="login-container">
-        <div class="brand-tag">Indra-Netra</div>
-        <h1>Crowd Safety System</h1>
-        <p id="welcome-text">Choose how you want to access the system</p>
+    <!-- PARTICLES -->
+    <div class="particles" id="particles"></div>
 
-        <!-- STEP 1: Main Role Selection -->
-        <div id="role-selection">
-            <button class="access-btn" onclick="showAuthorityOptions()" id="authority-btn">
-                <span class="icon">🛡️</span>
-                <div>
-                    <span class="title">Authority Dashboard</span>
-                    <span class="subtitle">Monitor live CCTV, risks & routes</span>
+    <!-- MAIN CONTAINER -->
+    <div class="container">
+        <div class="card">
+            <!-- ROLE SELECTION (STEP 1) -->
+            <div id="role-selection" class="form-section active">
+                <div class="header">
+                    <span class="brand-tag">⚡ Indra-Netra</span>
+                    <h1>Crowd Safety</h1>
+                    <p class="subtitle">Choose your access point</p>
                 </div>
-            </button>
 
-            <a href="{{ url_for('pilgrim_page') }}" class="access-btn" id="pilgrim-btn">
-                <span class="icon">🚶</span>
-                <div>
-                    <span class="title">Enter as Pilgrim</span>
-                    <span class="subtitle">View queues, safe routes & live map</span>
+                <div class="button-group">
+                    <button class="access-btn" onclick="showSection('authority-selection')">
+                        <span class="icon">🛡️</span>
+                        <span class="btn-text">
+                            <span class="btn-title">Authority Dashboard</span>
+                            <span class="btn-subtitle">Monitor live CCTV & risks</span>
+                        </span>
+                    </button>
+
+                    <a href="{{ url_for('pilgrim_page') }}" class="access-btn">
+                        <span class="icon">🚶</span>
+                        <span class="btn-text">
+                            <span class="btn-title">Pilgrim View</span>
+                            <span class="btn-subtitle">Safe routes & live map</span>
+                        </span>
+                    </a>
+
+                    <a href="{{ url_for('live_map') }}" target="_blank" class="access-btn">
+                        <span class="icon">🗺️</span>
+                        <span class="btn-text">
+                            <span class="btn-title">Live Map</span>
+                            <span class="btn-subtitle">GPS & crowd-based paths</span>
+                        </span>
+                    </a>
                 </div>
-            </a>
+            </div>
 
-            <a href="{{ url_for('live_map') }}" target="_blank" class="access-btn" id="live-map-btn">
-                <span class="icon">🗺️</span>
-                <div>
-                    <span class="title">Open Live Map</span>
-                    <span class="subtitle">Inside-campus GPS & crowd-based paths</span>
+            <!-- AUTHORITY SELECTION (STEP 2) -->
+            <div id="authority-selection" class="form-section">
+                <button class="back-btn" onclick="showSection('role-selection')">← Back</button>
+                <div class="header" style="text-align: left; margin-bottom: 28px;">
+                    <h2 class="form-title">Authority Portal</h2>
                 </div>
-            </a>
-        </div>
 
-        <!-- STEP 2: Authority Options -->
-        <div id="authority-options" style="display:none;">
-            <button class="back-link" onclick="showRoleSelection()">← Back</button>
-            <button class="access-btn" onclick="showLoginForm()" id="existing-authority-btn">
-                <span class="icon">🔑</span>
-                <div>
-                    <span class="title">Existing Authority</span>
-                    <span class="subtitle">Login with your credentials</span>
+                <div class="button-group">
+                    <button class="access-btn" onclick="showSection('login-form')">
+                        <span class="icon">🔑</span>
+                        <span class="btn-text">
+                            <span class="btn-title">Existing Account</span>
+                            <span class="btn-subtitle">Login with credentials</span>
+                        </span>
+                    </button>
+
+                    <button class="access-btn" onclick="showSection('register-form')">
+                        <span class="icon">✨</span>
+                        <span class="btn-text">
+                            <span class="btn-title">New Account</span>
+                            <span class="btn-subtitle">Create authority account</span>
+                        </span>
+                    </button>
                 </div>
-            </button>
-            <button class="access-btn" onclick="showRegisterForm()" id="new-authority-btn">
-                <span class="icon">✨</span>
-                <div>
-                    <span class="title">New Authority</span>
-                    <span class="subtitle">Create a new account</span>
-                </div>
-            </button>
-        </div>
+            </div>
 
-        <!-- STEP 3A: LOGIN Form -->
-        <div id="login-form" class="login-form">
-            <button class="back-link" onclick="showAuthorityOptions()">← Back</button>
-            <h3>Authority Login</h3>
-            <form action="{{ url_for('login') }}" method="post">
-                <input type="text" name="username" class="form-input" placeholder="Username" required autocomplete="username">
-                <input type="password" name="password" class="form-input" placeholder="Password" required autocomplete="current-password">
-                <button type="submit" class="btn-login" id="login-submit-btn">Sign In</button>
-            </form>
-            {% if error %}
-            <p class="error-message">{{ error }}</p>
-            {% endif %}
-        </div>
+            <!-- LOGIN FORM (STEP 3A) -->
+            <div id="login-form" class="form-section">
+                <button class="back-btn" onclick="showSection('authority-selection')">← Back</button>
+                <h2 class="form-title">Welcome Back</h2>
 
-        <!-- STEP 3B: REGISTER Form -->
-        <div id="register-form" class="register-form">
-            <button class="back-link" onclick="showAuthorityOptions()">← Back</button>
-            <h3>New Authority Registration</h3>
-            <form action="/register" method="post">
-                <input type="text" name="new_username" class="form-input" placeholder="Choose Username" required autocomplete="username">
-                <input type="password" name="new_password" class="form-input" placeholder="Choose Password" required autocomplete="new-password">
-                <input type="email" name="email" class="form-input" placeholder="Email Address" required autocomplete="email">
-                <button type="submit" class="btn-login" id="register-submit-btn">Create Account</button>
-            </form>
-        </div>
+                <form action="{{ url_for('login') }}" method="post">
+                    <div class="floating-label">
+                        <input type="text" name="username" id="login-username" class="form-input" placeholder=" " required autocomplete="username">
+                        <label>Username</label>
+                    </div>
 
-        <!-- Add Camera (hackathon demo) -->
-        <div id="add-camera-form" style="display:none; text-align:left;">
-            <h3>Add Camera</h3>
-            <form action="/add_camera" method="post">
-                <input type="text" name="camera_name" class="form-input"
-                       placeholder="Camera Name (e.g., Gate 1)" required>
-                <input type="text" name="rtsp_url" class="form-input"
-                       placeholder="RTSP URL (rtsp://...)" required>
-                <input type="text" name="cam_username" class="form-input"
-                       placeholder="Camera Username (optional)">
-                <input type="password" name="cam_password" class="form-input"
-                       placeholder="Camera Password (optional)">
-                <select name="zone_type" class="form-input" required>
-                    <option value="" disabled selected>Select Zone Type</option>
-                    <option value="darshan">Darshan Hall</option>
-                    <option value="queue">Queue Line</option>
-                    <option value="gate">Gate / Exit</option>
-                    <option value="outer">Outer Area</option>
-                </select>
-                <button type="submit" class="btn-login">Save Camera</button>
-            </form>
+                    <div class="floating-label">
+                        <input type="password" name="password" id="login-password" class="form-input" placeholder=" " required autocomplete="current-password">
+                        <label>Password</label>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Sign In</button>
+                    {% if error %}
+                    <div class="error-message show">{{ error }}</div>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- REGISTER FORM (STEP 3B) -->
+            <div id="register-form" class="form-section">
+                <button class="back-btn" onclick="showSection('authority-selection')">← Back</button>
+                <h2 class="form-title">Join Authority</h2>
+
+                <form action="/register" method="post">
+                    <div class="floating-label">
+                        <input type="text" name="new_username" id="register-username" class="form-input" placeholder=" " required autocomplete="username">
+                        <label>Username</label>
+                    </div>
+
+                    <div class="floating-label">
+                        <input type="email" name="email" id="register-email" class="form-input" placeholder=" " required autocomplete="email">
+                        <label>Email Address</label>
+                    </div>
+
+                    <div class="floating-label">
+                        <input type="password" name="new_password" id="register-password" class="form-input" placeholder=" " required autocomplete="new-password">
+                        <label>Password</label>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Create Account</button>
+                </form>
+            </div>
+
+            <!-- ADD CAMERA FORM -->
+            <div id="add-camera-form" class="form-section">
+                <button class="back-btn" onclick="showSection('role-selection')">← Back</button>
+                <h2 class="form-title">Add First Camera</h2>
+
+                <form action="/add_camera" method="post">
+                    <div class="floating-label">
+                        <input type="text" name="camera_name" class="form-input" placeholder=" " required>
+                        <label>Camera Name (e.g., Gate 1)</label>
+                    </div>
+
+                    <div class="floating-label">
+                        <input type="text" name="rtsp_url" class="form-input" placeholder=" " required>
+                        <label>RTSP URL (rtsp://...)</label>
+                    </div>
+
+                    <div class="floating-label">
+                        <input type="text" name="cam_username" class="form-input" placeholder=" ">
+                        <label>Camera Username (optional)</label>
+                    </div>
+
+                    <div class="floating-label">
+                        <input type="password" name="cam_password" class="form-input" placeholder=" ">
+                        <label>Camera Password (optional)</label>
+                    </div>
+                    
+                    <div class="floating-label">
+                        <select name="zone_type" class="form-input" required style="padding-top: 14px;">
+                            <option value="" disabled selected></option>
+                            <option value="darshan">Darshan Hall</option>
+                            <option value="queue">Queue Line</option>
+                            <option value="gate">Gate / Exit</option>
+                            <option value="outer">Outer Area</option>
+                        </select>
+                        <label>Zone Type</label>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Save Camera</button>
+                </form>
+            </div>
         </div>
     </div>
 
-<script>
-    function showRoleSelection() {
-        document.getElementById("authority-options").style.display = "none";
-        document.getElementById("login-form").style.display = "none";
-        document.getElementById("register-form").style.display = "none";
-        document.getElementById("role-selection").style.display = "block";
-        document.getElementById("welcome-text").innerText = "Choose how you want to access the system";
-    }
+    <script>
+        // ============= STARFIELD ANIMATION =============
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
 
-    function showAuthorityOptions() {
-        document.getElementById("role-selection").style.display = "none";
-        document.getElementById("login-form").style.display = "none";
-        document.getElementById("register-form").style.display = "none";
-        document.getElementById("authority-options").style.display = "block";
-        document.getElementById("welcome-text").innerText = "Authority Portal";
-    }
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-    function showLoginForm() {
-        document.getElementById("authority-options").style.display = "none";
-        document.getElementById("login-form").style.display = "block";
-        document.getElementById("welcome-text").innerText = "Authority Login";
-    }
+        const stars = [];
+        const brokenStars = [];
 
-    function showRegisterForm() {
-        document.getElementById("authority-options").style.display = "none";
-        document.getElementById("register-form").style.display = "block";
-        document.getElementById("welcome-text").innerText = "Register New Authority";
-    }
+        class Star {
+            constructor(x, y, radius, opacity) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.opacity = opacity;
+                this.twinkleDuration = Math.random() * 2 + 1;
+                this.age = Math.random() * this.twinkleDuration;
+            }
 
-    function showAddCameraForm() {
-        document.getElementById("register-form").style.display = "none";
-        document.getElementById("add-camera-form").style.display = "block";
-        document.getElementById("welcome-text").innerText = "Add Camera to Start";
-    }
+            update() {
+                this.age += 0.016;
+                if (this.age > this.twinkleDuration) {
+                    this.age = 0;
+                }
+            }
 
-    {% if show_add_camera %}
-        showAddCameraForm();
-    {% endif %}
-</script>
+            draw(ctx) {
+                const twinkle = Math.sin((this.age / this.twinkleDuration) * Math.PI);
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity * twinkle * 0.7})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
 
+        class BrokenStar {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.particles = [];
+                this.lifetime = 0;
+                this.maxLifetime = 2;
+
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * 2,
+                        vy: Math.sin(angle) * 2,
+                        life: 1
+                    });
+                }
+            }
+
+            update() {
+                this.lifetime += 0.016;
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.1;
+                    p.life -= 0.016 / this.maxLifetime;
+                });
+            }
+
+            draw(ctx) {
+                const glow = Math.sin((this.lifetime / this.maxLifetime) * Math.PI);
+                ctx.shadowColor = '#ffd700';
+                ctx.shadowBlur = 10 * glow;
+
+                this.particles.forEach(p => {
+                    if (p.life > 0) {
+                        ctx.fillStyle = `rgba(255, 215, 0, ${p.life})`;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 1, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                ctx.shadowBlur = 0;
+            }
+
+            isAlive() {
+                return this.lifetime < this.maxLifetime;
+            }
+        }
+
+        // Create initial stars
+        for (let i = 0; i < 100; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = Math.random() * 1 + 0.5;
+            const opacity = Math.random() * 0.5 + 0.3;
+            stars.push(new Star(x, y, radius, opacity));
+        }
+
+        // Randomly break stars
+        function createBrokenStar() {
+            if (Math.random() > 0.95) {
+                const randomStar = stars[Math.floor(Math.random() * stars.length)];
+                brokenStars.push(new BrokenStar(randomStar.x, randomStar.y));
+            }
+        }
+
+        function animateStarfield() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            stars.forEach(star => {
+                star.update();
+                star.draw(ctx);
+            });
+
+            brokenStars.forEach((star, index) => {
+                star.update();
+                star.draw(ctx);
+                if (!star.isAlive()) {
+                    brokenStars.splice(index, 1);
+                }
+            });
+
+            createBrokenStar();
+            requestAnimationFrame(animateStarfield);
+        }
+
+        animateStarfield();
+
+        // Resize canvas
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Click to break stars
+        canvas.addEventListener('click', (e) => {
+            brokenStars.push(new BrokenStar(e.clientX, e.clientY));
+        });
+
+        // ============= PARTICLES =============
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = '100%';
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                particle.style.animationDuration = (Math.random() * 15 + 15) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        createParticles();
+
+        // ============= NAVIGATION =============
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.form-section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                showSection('role-selection');
+            }
+        });
+
+        // Logic from backend for showing error/add-camera section
+        {% if error %}
+            showSection('login-form');
+        {% endif %}
+
+        {% if show_add_camera %}
+            showSection('add-camera-form');
+        {% endif %}
+    </script>
 </body>
 </html>
